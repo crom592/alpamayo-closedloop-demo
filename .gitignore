@@ -1,0 +1,47 @@
+# Secrets
+.env
+*.pem
+*.key
+
+# NRE artifacts (downloaded at runtime, license unclear, do NOT commit)
+**/data/nre-artifacts/
+**/*.usdz
+**/scenesets/
+**/ego-hoods/
+
+# Model weights (pulled from HuggingFace at runtime)
+**/models/
+**/.cache/huggingface/
+**/checkpoints/
+
+# Generated docker-compose (arch-specific, regenerate on target)
+**/run_dir/
+**/run_a15_first/
+
+# Open-loop prerender outputs (regenerable)
+**/demo_cache/
+**/ui_outputs/
+**/ui_outputs.log*
+**/*.mp4
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+poc_venv/
+.uv/
+
+# Logs
+*.log
+setup.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp

@@ -1,0 +1,18 @@
+Alpamayo + Alpasim Closed-Loop Demo
+Copyright 2026 crom592
+
+This product includes software developed by NVIDIA Corporation:
+
+  Alpamayo 1.5
+  https://github.com/NVlabs/alpamayo1.5
+  Licensed under the Apache License, Version 2.0
+  Copyright 2025 NVIDIA Corporation
+
+  Alpasim
+  https://github.com/NVlabs/alpasim
+  Licensed under the Apache License, Version 2.0
+  Copyright 2025 NVIDIA Corporation
+
+NRE (NVIDIA Neural Rendering Engine) scene assets used by this demo
+are downloaded at runtime from NVIDIA's distribution channels under
+NVIDIA's own terms; they are NOT redistributed via this repository.
