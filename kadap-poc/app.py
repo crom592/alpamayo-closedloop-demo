@@ -26,6 +26,7 @@ import matplotlib.pyplot as plt  # noqa: E402
 import metrics  # noqa: E402
 import report  # noqa: E402
 import scenarios  # noqa: E402
+import trace  # noqa: E402
 from runner import (  # noqa: E402
     REPO_ROOT,
     ROLLOUTS_DIR,
@@ -565,7 +566,113 @@ def build_ui() -> gr.Blocks:
                 outputs=rep_rollout,
             )
 
-        with gr.Tab("⑥ 🗂 시나리오 카탈로그"):
+        with gr.Tab("⑥ 🔬 closed-loop trace"):
+            gr.Markdown(
+                "**NRE → driver → controller 가 매 step 어떻게 연결되어 도는지 확인.**  \n"
+                "rollout 선택 → step slider 로 이동 → 그 step 의 NRE 렌더 4-카메라 + driver 가 낸 예측 "
+                "trajectory 길이 + controller 가 propagate 한 실제 ego pose / 속도 표시.  \n"
+                "_v0 한계: 현 시나리오는 1.5 초 클립 + driver 가 pose history 부족으로 빈 trajectory 를 반환합니다 — "
+                "더 긴 시나리오를 Tab ⑥에서 받아 비교하면 driver 실효 추론이 드러납니다._"
+            )
+            tr_rollout = gr.Dropdown(
+                choices=rollout_choices(), label="rollout 선택", value=None
+            )
+            with gr.Row():
+                tr_refresh = gr.Button("↻ rollout 목록 새로고침", size="sm")
+                tr_extract = gr.Button("📷 frames 추출 / 갱신", size="sm")
+            tr_status = gr.Markdown("_rollout 선택_")
+            tr_step = gr.Slider(0, 1, value=0, step=1, label="step idx", interactive=True)
+            tr_meta = gr.Markdown()
+            with gr.Row():
+                tr_cam_fw = gr.Image(label="front_wide_120fov", height=220)
+                tr_cam_ft = gr.Image(label="front_tele_30fov", height=220)
+            with gr.Row():
+                tr_cam_cl = gr.Image(label="cross_left_120fov", height=220)
+                tr_cam_cr = gr.Image(label="cross_right_120fov", height=220)
+
+            CAM_ORDER = [
+                "camera_front_wide_120fov",
+                "camera_front_tele_30fov",
+                "camera_cross_left_120fov",
+                "camera_cross_right_120fov",
+            ]
+
+            def _trace_cameras(uuid, step_idx):
+                r = _find_rollout(uuid) if uuid else None
+                if r is None:
+                    return [None] * 4
+                cams = trace.step_cameras(r, int(step_idx))
+                return [str(cams[k]) if k in cams else None for k in CAM_ORDER]
+
+            def _trace_meta_md(uuid, step_idx):
+                r = _find_rollout(uuid) if uuid else None
+                if r is None:
+                    return "_rollout 미선택_"
+                steps = trace.parse_steps(r)
+                if not steps or int(step_idx) >= len(steps):
+                    return "_step 정보 없음_"
+                s = steps[int(step_idx)]
+                pred_txt = (
+                    f"{s.n_predicted} waypoints, last=({s.last_predicted_xy[0]:.2f}, {s.last_predicted_xy[1]:.2f})"
+                    if s.n_predicted and s.last_predicted_xy
+                    else "**빈 trajectory** (pose history 부족 가능성)"
+                )
+                return (
+                    f"### step {s.step_idx} / sim_time {s.sim_time_s:.2f}s\n\n"
+                    f"| 항목 | 값 |\n|---|---|\n"
+                    f"| timestamp_us | {s.timestamp_us} |\n"
+                    f"| ego pose (x, y) | ({s.ego_xy[0]:.2f}, {s.ego_xy[1]:.2f}) |\n"
+                    f"| ego speed | {s.ego_speed:.2f} m/s |\n"
+                    f"| driver 예측 trajectory | {pred_txt} |\n"
+                )
+
+            def _trace_load(uuid):
+                if not uuid:
+                    return (
+                        gr.update(maximum=1, value=0),
+                        "_rollout 선택_",
+                        "_rollout 미선택_",
+                        None, None, None, None,
+                    )
+                r = _find_rollout(uuid)
+                if r is None:
+                    return (gr.update(maximum=1, value=0), f"❌ {uuid} 없음", "", None, None, None, None)
+                # ensure frames present; cheap if cached
+                trace.ensure_frames_extracted(r)
+                steps = trace.parse_steps(r)
+                n = max(1, len(steps) - 1)  # slider needs min<max even when empty
+                cams = _trace_cameras(uuid, 0)
+                meta = _trace_meta_md(uuid, 0)
+                status = f"✅ {len(steps)} step / 4-cam frames 캐시 완료"
+                return gr.update(maximum=n, value=0), status, meta, *cams
+
+            def _trace_step_change(uuid, step_idx):
+                meta = _trace_meta_md(uuid, step_idx)
+                cams = _trace_cameras(uuid, step_idx)
+                return meta, *cams
+
+            def _trace_extract(uuid):
+                if not uuid:
+                    return "_rollout 미선택_"
+                r = _find_rollout(uuid)
+                if r is None:
+                    return f"❌ {uuid} 없음"
+                trace.ensure_frames_extracted(r)
+                return "✅ frames 캐시 갱신됨"
+
+            tr_outs = [tr_step, tr_status, tr_meta, tr_cam_fw, tr_cam_ft, tr_cam_cl, tr_cam_cr]
+            tr_rollout.change(_trace_load, inputs=tr_rollout, outputs=tr_outs)
+            tr_step.change(
+                _trace_step_change,
+                inputs=[tr_rollout, tr_step],
+                outputs=[tr_meta, tr_cam_fw, tr_cam_ft, tr_cam_cl, tr_cam_cr],
+            )
+            tr_refresh.click(
+                lambda: gr.update(choices=rollout_choices()), outputs=tr_rollout
+            )
+            tr_extract.click(_trace_extract, inputs=tr_rollout, outputs=tr_status)
+
+        with gr.Tab("⑦ 🗂 시나리오 카탈로그"):
             gr.Markdown(
                 f"NVIDIA `{scenarios.HF_REPO}` (HF dataset) 의 시나리오 카탈로그.  \n"
                 "**v0**: 로컬 디스크에 있는지 표시 + 단건 다운로드. wizard에 다른 "
