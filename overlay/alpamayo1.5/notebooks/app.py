@@ -11,6 +11,8 @@ Run inside the alpamayo-poc container:
 import argparse
 import datetime as dt
 import json
+import os
+import subprocess
 import time
 from pathlib import Path
 
@@ -733,6 +735,152 @@ CSS = """
 """
 
 
+# ============================================================================
+# Closed-loop (NRE) integration helpers — Tab ⑦.
+#
+# These talk to the Alpasim docker compose stack that's brought up by
+# `scripts/run_closedloop.sh` on a GPU-capable x86 host (KADaP A40 48GB or
+# similar). On the ARM POC node they will report "미감지", which is expected.
+# ============================================================================
+
+CLOSED_LOOP_SERVICES = ["controller-0", "driver-0", "physics-0", "trafficsim-0", "nre-0"]
+CL_RUN_DIR = Path(
+    os.environ.get("RUN_DIR", str(NOTEBOOK_DIR.parent.parent / "alpasim" / "run_dir"))
+)
+
+
+def _cl_run(cmd: list[str], timeout: int = 5) -> str:
+    try:
+        out = subprocess.run(
+            cmd, capture_output=True, text=True, timeout=timeout, check=False
+        )
+        return out.stdout + out.stderr
+    except (subprocess.TimeoutExpired, FileNotFoundError) as e:
+        return f"<<error: {e}>>"
+
+
+def _cl_resolve_container(substr: str) -> str | None:
+    raw = _cl_run(["docker", "ps", "-a", "--format", "{{.Names}}"], timeout=5)
+    for n in raw.splitlines():
+        if substr in n:
+            return n.strip()
+    return None
+
+
+def cl_service_health() -> str:
+    raw = _cl_run(["docker", "ps", "-a", "--format", "{{json .}}"], timeout=8)
+    services: dict[str, dict] = {}
+    for line in raw.splitlines():
+        line = line.strip()
+        if not line.startswith("{"):
+            continue
+        try:
+            info = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        name = info.get("Names", "")
+        for svc in CLOSED_LOOP_SERVICES:
+            if svc in name:
+                services[svc] = {
+                    "state": info.get("State", "?"),
+                    "status": info.get("Status", "?"),
+                }
+                break
+    rows = ["| 서비스 | 상태 | 상세 |", "|---|---|---|"]
+    any_up = False
+    for svc in CLOSED_LOOP_SERVICES:
+        s = services.get(svc)
+        if s is None:
+            rows.append(f"| `{svc}` | ⚪ 미감지 | _컨테이너 없음_ |")
+            continue
+        state = s["state"]
+        if state == "running" and "healthy" in s["status"]:
+            emoji = "🟢"
+            any_up = True
+        elif state == "running":
+            emoji = "🟡"
+            any_up = True
+        else:
+            emoji = "🔴"
+        rows.append(f"| `{svc}` | {emoji} {state} | {s['status']} |")
+    header = "### Alpasim 서비스 상태\n"
+    if not any_up:
+        header += (
+            "_컨테이너가 감지되지 않습니다._ closed-loop 환경에서 "
+            "`bash scripts/run_closedloop.sh` 실행 후 새로고침하세요.\n\n"
+        )
+    return header + "\n".join(rows)
+
+
+def cl_gpu_metrics() -> str:
+    raw = _cl_run(
+        [
+            "nvidia-smi",
+            "--query-gpu=index,name,utilization.gpu,memory.used,memory.total,temperature.gpu",
+            "--format=csv,noheader,nounits",
+        ],
+        timeout=5,
+    )
+    rows = ["| GPU | util | VRAM (MiB) | 온도 |", "|---|---|---|---|"]
+    found = False
+    for line in raw.splitlines():
+        parts = [p.strip() for p in line.split(",")]
+        if len(parts) != 6:
+            continue
+        found = True
+        try:
+            mem_used = int(parts[3])
+            mem_total = int(parts[4])
+            mem_pct = 100 * mem_used / max(mem_total, 1)
+        except ValueError:
+            mem_used = mem_total = 0
+            mem_pct = 0
+        rows.append(
+            f"| {parts[0]} `{parts[1][:20]}` | {parts[2]}% | {mem_used}/{mem_total} ({mem_pct:.0f}%) | {parts[5]}°C |"
+        )
+    if not found:
+        return "### GPU\n_nvidia-smi 사용 불가 (ARM 노드이거나 NVIDIA Container Toolkit 미설정)_"
+    return "### GPU\n" + "\n".join(rows)
+
+
+def cl_container_log(substr: str, tail: int) -> str:
+    name = _cl_resolve_container(substr)
+    if not name:
+        return f"_{substr} 컨테이너가 없습니다._"
+    raw = _cl_run(["docker", "logs", "--tail", str(tail), name], timeout=10)
+    if not raw.strip():
+        return "_(empty)_"
+    return f"```\n{raw[-6000:]}\n```"
+
+
+def cl_latest_rollouts(n: int = 4) -> list[str | None]:
+    rollouts_dir = CL_RUN_DIR / "rollouts"
+    if not rollouts_dir.exists():
+        return [None] * n
+    mp4s = sorted(
+        rollouts_dir.rglob("*.mp4"),
+        key=lambda p: p.stat().st_mtime,
+        reverse=True,
+    )
+    out: list[str | None] = [str(p) for p in mp4s[:n]]
+    while len(out) < n:
+        out.append(None)
+    return out
+
+
+def cl_panel_refresh():
+    """One-shot refresh of all closed-loop panel components."""
+    health = cl_service_health()
+    gpu = cl_gpu_metrics()
+    ctrl_log = cl_container_log("controller-0", tail=80)
+    drv_log = cl_container_log("driver-0", tail=40)
+    vids = cl_latest_rollouts(n=4)
+    rollout_meta = (
+        f"_RUN_DIR=`{CL_RUN_DIR}`  •  감지된 MP4: {sum(1 for v in vids if v)}개_"
+    )
+    return health, gpu, ctrl_log, drv_log, rollout_meta, vids[0], vids[1], vids[2], vids[3]
+
+
 def build_ui():
     with gr.Blocks(title="KATECH V2X 자율주행 평가 POC") as demo:
         with gr.Row(elem_id="title-row"):
@@ -925,6 +1073,41 @@ def build_ui():
 
             refresh_btn.click(render_hist, [history_state], [history_md])
 
+        with gr.Tab("⑦ 🌐 Closed-loop (NRE)"):
+            gr.Markdown(
+                "**Alpasim + NVIDIA NRE(Neural Rendering Engine)** 가 차량 센서 영상을 사진실사로 "
+                "렌더링하고, Alpamayo 1.5 는 그 영상만 보고 운전합니다. 시뮬레이터가 차량 동역학을 닫고 "
+                "모델 출력이 다음 프레임의 상태를 결정하는 **closed-loop** 구성입니다.\n\n"
+                "이 탭은 closed-loop 환경(예: KADaP A40 48GB GPU 서버)에서 "
+                "`bash scripts/run_closedloop.sh` 실행 후 자동으로 데이터가 채워집니다. "
+                "**본 ARM POC 노드에서는 \"미감지\"가 정상**입니다 — NRE 는 x86 + 대형 GPU 만 지원."
+            )
+            with gr.Row():
+                with gr.Column(scale=1):
+                    cl_health_md = gr.Markdown()
+                    cl_gpu_md = gr.Markdown()
+                    cl_refresh_btn = gr.Button("🔄 새로고침", variant="primary")
+                    gr.Markdown("---\n### driver-0 (Alpamayo 1.5 추론)")
+                    cl_drv_md = gr.Markdown()
+                with gr.Column(scale=2):
+                    gr.Markdown("### controller-0 (rollout orchestration)")
+                    cl_ctrl_md = gr.Markdown()
+                    gr.Markdown("### 최신 rollout MP4 (NRE 렌더링 결과)")
+                    cl_meta_md = gr.Markdown()
+                    with gr.Row():
+                        cl_v1 = gr.Video(label="rollout #1 (최신)", height=220)
+                        cl_v2 = gr.Video(label="rollout #2", height=220)
+                    with gr.Row():
+                        cl_v3 = gr.Video(label="rollout #3", height=220)
+                        cl_v4 = gr.Video(label="rollout #4", height=220)
+
+            _cl_outs = [
+                cl_health_md, cl_gpu_md, cl_ctrl_md, cl_drv_md,
+                cl_meta_md, cl_v1, cl_v2, cl_v3, cl_v4,
+            ]
+            cl_refresh_btn.click(cl_panel_refresh, [], _cl_outs)
+            demo.load(cl_panel_refresh, [], _cl_outs)
+
         with gr.Tab("ⓘ 시스템 구성"):
             gr.Markdown(
                 """
@@ -950,6 +1133,7 @@ def build_ui():
 
 ### 한계 및 본 사업 1차년도 연계 사항
 - **Closed-loop 시뮬레이션은 별도 x86 노드 필요**: NVIDIA NRE(Neural Rendering Engine)가 ARM 미지원
+  → **KADaP 자동차산업클라우드(A40 48GB) 환경에 closed-loop 배포 완료** — Tab ⑦ 참조
 - **현재 클립은 NVIDIA 제공 미국 주행 데이터**: 한국 도로/V2X 메시지 포맷에 맞춘 fine-tuning이 본 사업 1차년도 핵심 과제
 - 반사실 검증 결과(direction swap)에서 일부 시나리오는 V2X 메시지를 모델이 무시 → 한국 데이터 도메인 적응 필요성의 정량 근거
                 """
