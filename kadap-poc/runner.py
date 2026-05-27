@@ -127,10 +127,13 @@ def _compose_down() -> None:
     )
 
 
-def _start_wizard_and_compose(driver: str) -> None:
+def _start_wizard_and_compose(driver: str, scene_ids: list[str] | None = None) -> None:
     if not shutil.which("bash"):
         raise RuntimeError("bash not on PATH")
     env = {**os.environ, "DRIVER": driver}
+    if scene_ids:
+        # Hydra list override syntax for wizard.scenes.scene_ids
+        env["SCENE_IDS"] = "[" + ",".join(scene_ids) + "]"
     subprocess.run(
         ["bash", str(RUN_CLOSEDLOOP)],
         cwd=REPO_ROOT,
@@ -198,12 +201,15 @@ def _wait_for_rollout_finalised(
 def run_oneshot(
     driver: str = "alpamayo1_5",
     on_progress: Callable[[float, str], None] | None = None,
+    scene_ids: list[str] | None = None,
 ) -> RolloutRef:
     """Trigger a one-shot simulation. Blocking; ~10–15 min on A40.
 
     Args:
         driver: wizard driver name (alpamayo1_5 / vavam / manual / alpamayo1).
         on_progress: optional ``(pct, status)`` callback for UI feedback.
+        scene_ids: optional list of catalog scene_ids; defaults to the
+            wizard's built-in default (single 1.5s OSS clip) when None.
 
     Returns the new RolloutRef once rollout.asl is finalised.
     """
@@ -214,7 +220,7 @@ def run_oneshot(
     if on_progress:
         on_progress(0.05, f"wizard + compose up (driver={driver})…")
     pre = {(r.scenario_id, r.rollout_uuid) for r in existing_rollouts()}
-    _start_wizard_and_compose(driver)
+    _start_wizard_and_compose(driver, scene_ids=scene_ids)
 
     if on_progress:
         on_progress(0.10, "컨테이너 기동 완료, 첫 rollout 생성 대기 중…")
@@ -242,6 +248,7 @@ if __name__ == "__main__":
 
     p = argparse.ArgumentParser()
     p.add_argument("--driver", default="alpamayo1_5")
+    p.add_argument("--scene-id", action="append", help="repeatable scene_id override")
     p.add_argument("--list", action="store_true")
     p.add_argument(
         "--backfill-driver",
@@ -261,5 +268,9 @@ if __name__ == "__main__":
                 n += 1
         print(f"backfilled {n} rollouts")
     else:
-        out = run_oneshot(args.driver, on_progress=lambda pct, msg: print(f"[{pct:.0%}] {msg}"))
+        out = run_oneshot(
+            args.driver,
+            on_progress=lambda pct, msg: print(f"[{pct:.0%}] {msg}"),
+            scene_ids=args.scene_id,
+        )
         print(f"DONE: {out.dir}")

@@ -105,3 +105,35 @@ Pointers for the bisect:
 PoC uses one-shot compose runs (`kadap-poc/runner.py`). Daemon RPC
 code in `kadap-poc/client.py` is retained verbatim so we can switch
 back once the upstream fix lands.
+
+---
+
+## Secondary finding (also worth filing): one-shot simulation terminates
+## at 14 control cycles regardless of scenario length
+
+Verified across two different OSS scenes (`clipgt-01d503d4`, ~1.5 GB USDZ
+and `clipgt-023b7fcc`, ~1.4 GB USDZ) on the wizard's default
+`topology=1gpu, driver=alpamayo1_5` deploy:
+
+- ``rollout_metadata.session_metadata.n_sim_steps = 200`` (intent: ~20 s)
+- ``ego_rig_recorded_ground_truth_trajectory.poses`` length is 202 — the
+  scenario itself has 20 s of recorded GT available
+- yet only **14 controller_return** entries land in the rollout, span
+  ~1.4 s, after which the runtime logs ``Draining N outstanding tasks``
+  and shuts the stack down
+- driver's ``DriveResponse.trajectory.poses`` is **empty for all 14**
+  cycles (alpamayo1_5 logs ``Pose history too short: available span
+  1400.0ms < required 1500.0ms``)
+
+So the closed loop *runs* — sensorsim renders 60 NRE frames, driver
+fields 14 grpc calls, controller propagates a vehicle model — but the
+driver never gets enough pose history to emit a real trajectory, so its
+contribution to the rolled-out ego pose is effectively zero. The
+simulator quits before pose history would have caught up.
+
+If `n_sim_steps=200` is supposed to bound the run, something else is
+ending it earlier; please document the actual termination condition or
+let the driver warm up.
+
+For the PoC this is the main reason the rollouts look "trivial" — they
+are GT replay with a stalled driver, not genuine closed-loop inference.

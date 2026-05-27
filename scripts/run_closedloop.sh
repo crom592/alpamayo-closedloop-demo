@@ -12,7 +12,11 @@ cd "$REPO_ROOT"
 set -a; source .env; set +a
 export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
 DRIVER="${DRIVER:-alpamayo1_5}"
-RUN_DIR="${RUN_DIR:-$REPO_ROOT/alpasim/run_dir}"
+# Wizard, when invoked from $REPO_ROOT/alpasim with wizard.log_dir, resolves
+# the path under that cwd and emits artifacts at .../alpasim/alpasim/run_dir.
+# Mirror that here so the patcher finds the YAML it actually wrote.
+RUN_DIR="${RUN_DIR:-$REPO_ROOT/alpasim/alpasim/run_dir}"
+SCENE_IDS="${SCENE_IDS:-}"   # optional: pass as '["clipgt-…","clipgt-…"]'
 mkdir -p "$RUN_DIR"
 
 echo "==> Generating docker-compose via alpasim_wizard (topology=1gpu, driver=$DRIVER, no auto-up)"
@@ -22,12 +26,17 @@ pushd "$REPO_ROOT/alpasim" >/dev/null
 # extended startup_timeout_s. Otherwise the wizard's foreground compose-up
 # races the patcher and the (unpatched) runtime hits its 120s probe deadline
 # while driver-0 is still loading the Alpamayo 1.5 weights.
+wizard_extra=()
+if [[ -n "$SCENE_IDS" ]]; then
+  wizard_extra+=("scenes.scene_ids=$SCENE_IDS")
+fi
 uv run alpasim_wizard \
   deploy=local \
   topology=1gpu \
   driver="$DRIVER" \
   wizard.log_dir="$RUN_DIR" \
-  wizard.run_method=NONE
+  wizard.run_method=NONE \
+  "${wizard_extra[@]}"
 
 compose_file="$RUN_DIR/docker-compose.yaml"
 if [[ ! -f "$compose_file" ]]; then
