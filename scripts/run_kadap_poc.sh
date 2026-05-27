@@ -39,4 +39,7 @@ EOF
 fi
 
 echo "==> launching Gradio on ${HOST}:${PORT}"
+# Direct exec — the foreground process is what `bash scripts/run_kadap_poc.sh`
+# users expect. For background use, prefix with nohup:
+#   nohup bash scripts/run_kadap_poc.sh > /tmp/kadap-poc.log 2>&1 < /dev/null &
 KADAP_POC_HOST="$HOST" KADAP_POC_PORT="$PORT" exec "$VENV_PY" "$APP"

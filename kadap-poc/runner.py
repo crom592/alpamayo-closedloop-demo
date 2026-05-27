@@ -16,6 +16,8 @@ End-to-end cost is ~10–15 min on an A40 (model load dominates).
 
 from __future__ import annotations
 
+import datetime as dt
+import json
 import os
 import shutil
 import subprocess
@@ -36,6 +38,9 @@ ASL_STABLE_CHECKS = 3
 POLL_INTERVAL_S = 10
 
 
+KADAP_META = "kadap_meta.json"
+
+
 @dataclass
 class RolloutRef:
     scenario_id: str
@@ -45,6 +50,31 @@ class RolloutRef:
     @property
     def asl(self) -> Path:
         return self.dir / "rollout.asl"
+
+    @property
+    def meta(self) -> dict:
+        p = self.dir / KADAP_META
+        if not p.exists():
+            return {}
+        try:
+            return json.loads(p.read_text())
+        except json.JSONDecodeError:
+            return {}
+
+    @property
+    def driver(self) -> str:
+        # explicit marker wins; otherwise unknown (pre-PoC rollouts have no marker)
+        return self.meta.get("driver", "unknown")
+
+
+def _write_meta(rollout: RolloutRef, driver: str) -> None:
+    """Stamp the kadap_meta.json so downstream UIs know which policy ran."""
+    payload = {
+        "driver": driver,
+        "scenario_id": rollout.scenario_id,
+        "finished_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
+    }
+    (rollout.dir / KADAP_META).write_text(json.dumps(payload, indent=2))
 
 
 def existing_rollouts() -> list[RolloutRef]:
@@ -192,10 +222,19 @@ def run_oneshot(
     new_rollout = _wait_for_new_rollout(pre, on_progress, deadline)
 
     _wait_for_rollout_finalised(new_rollout, on_progress, deadline)
+    _write_meta(new_rollout, driver)
 
     if on_progress:
         on_progress(1.0, f"✅ 완료 — uuid={new_rollout.rollout_uuid}")
     return new_rollout
+
+
+def latest_rollout_for(scenario_id: str, driver: str) -> RolloutRef | None:
+    """Most recent rollout for the (scenario, driver) pair, or None."""
+    for r in existing_rollouts():
+        if r.scenario_id == scenario_id and r.driver == driver:
+            return r
+    return None
 
 
 if __name__ == "__main__":
@@ -204,10 +243,23 @@ if __name__ == "__main__":
     p = argparse.ArgumentParser()
     p.add_argument("--driver", default="alpamayo1_5")
     p.add_argument("--list", action="store_true")
+    p.add_argument(
+        "--backfill-driver",
+        metavar="NAME",
+        help="stamp every existing rollout missing kadap_meta.json with this driver",
+    )
     args = p.parse_args()
     if args.list:
         for r in existing_rollouts():
-            print(f"{r.scenario_id}/{r.rollout_uuid}  ({r.dir})")
+            print(f"{r.scenario_id}/{r.rollout_uuid}  driver={r.driver}  ({r.dir})")
+    elif args.backfill_driver:
+        n = 0
+        for r in existing_rollouts():
+            if not (r.dir / KADAP_META).exists():
+                _write_meta(r, args.backfill_driver)
+                print(f"stamped {r.rollout_uuid[:8]}…  driver={args.backfill_driver}")
+                n += 1
+        print(f"backfilled {n} rollouts")
     else:
         out = run_oneshot(args.driver, on_progress=lambda pct, msg: print(f"[{pct:.0%}] {msg}"))
         print(f"DONE: {out.dir}")
