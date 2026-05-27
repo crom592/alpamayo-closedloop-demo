@@ -15,13 +15,19 @@ DRIVER="${DRIVER:-alpamayo1_5}"
 RUN_DIR="${RUN_DIR:-$REPO_ROOT/alpasim/run_dir}"
 mkdir -p "$RUN_DIR"
 
-echo "==> Generating docker-compose via alpasim_wizard (topology=1gpu, driver=$DRIVER)"
+echo "==> Generating docker-compose via alpasim_wizard (topology=1gpu, driver=$DRIVER, no auto-up)"
 pushd "$REPO_ROOT/alpasim" >/dev/null
+# wizard.run_method=NONE prevents the wizard from invoking `docker compose up`
+# itself; we run it ourselves below after the patcher injects HF token and the
+# extended startup_timeout_s. Otherwise the wizard's foreground compose-up
+# races the patcher and the (unpatched) runtime hits its 120s probe deadline
+# while driver-0 is still loading the Alpamayo 1.5 weights.
 uv run alpasim_wizard \
   deploy=local \
   topology=1gpu \
   driver="$DRIVER" \
-  wizard.log_dir="$RUN_DIR"
+  wizard.log_dir="$RUN_DIR" \
+  wizard.run_method=NONE
 
 compose_file="$RUN_DIR/docker-compose.yaml"
 if [[ ! -f "$compose_file" ]]; then
