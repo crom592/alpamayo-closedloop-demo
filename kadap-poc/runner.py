@@ -66,12 +66,17 @@ class RolloutRef:
         # explicit marker wins; otherwise unknown (pre-PoC rollouts have no marker)
         return self.meta.get("driver", "unknown")
 
+    @property
+    def ablation(self) -> str:
+        return self.meta.get("ablation", "base")
 
-def _write_meta(rollout: RolloutRef, driver: str) -> None:
+
+def _write_meta(rollout: RolloutRef, driver: str, ablation: str = "base") -> None:
     """Stamp the kadap_meta.json so downstream UIs know which policy ran."""
     payload = {
         "driver": driver,
         "scenario_id": rollout.scenario_id,
+        "ablation": ablation,
         "finished_at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds"),
     }
     (rollout.dir / KADAP_META).write_text(json.dumps(payload, indent=2))
@@ -127,13 +132,19 @@ def _compose_down() -> None:
     )
 
 
-def _start_wizard_and_compose(driver: str, scene_ids: list[str] | None = None) -> None:
+def _start_wizard_and_compose(
+    driver: str,
+    scene_ids: list[str] | None = None,
+    ablation_hydra: str | None = None,
+) -> None:
     if not shutil.which("bash"):
         raise RuntimeError("bash not on PATH")
     env = {**os.environ, "DRIVER": driver}
     if scene_ids:
         # Hydra list override syntax for wizard.scenes.scene_ids
         env["SCENE_IDS"] = "[" + ",".join(scene_ids) + "]"
+    if ablation_hydra:
+        env["ABLATION_HYDRA"] = ablation_hydra
     subprocess.run(
         ["bash", str(RUN_CLOSEDLOOP)],
         cwd=REPO_ROOT,
@@ -202,25 +213,35 @@ def run_oneshot(
     driver: str = "alpamayo1_5",
     on_progress: Callable[[float, str], None] | None = None,
     scene_ids: list[str] | None = None,
+    ablation: object | None = None,  # AblationSpec from ablation.py
 ) -> RolloutRef:
     """Trigger a one-shot simulation. Blocking; ~10–15 min on A40.
 
     Args:
-        driver: wizard driver name (alpamayo1_5 / vavam / manual / alpamayo1).
+        driver: wizard driver name (PoC v0 always uses alpamayo1_5).
         on_progress: optional ``(pct, status)`` callback for UI feedback.
         scene_ids: optional list of catalog scene_ids; defaults to the
-            wizard's built-in default (single 1.5s OSS clip) when None.
+            wizard's built-in default when None.
+        ablation: optional AblationSpec describing camera mask / start offset
+            tweaks. Forwarded to the wizard as Hydra overrides.
 
     Returns the new RolloutRef once rollout.asl is finalised.
     """
+    ablation_hint = "base"
+    ablation_hydra = None
+    if ablation is not None:
+        from ablation import hydra_overrides, to_env_value  # local import: optional dep
+        ablation_hydra = to_env_value(ablation)
+        ablation_hint = getattr(ablation, "name", "ablation")
+
     if on_progress:
         on_progress(0.02, "이전 컨테이너 정리…")
     _compose_down()
 
     if on_progress:
-        on_progress(0.05, f"wizard + compose up (driver={driver})…")
+        on_progress(0.05, f"wizard + compose up (driver={driver}, ablation={ablation_hint})…")
     pre = {(r.scenario_id, r.rollout_uuid) for r in existing_rollouts()}
-    _start_wizard_and_compose(driver, scene_ids=scene_ids)
+    _start_wizard_and_compose(driver, scene_ids=scene_ids, ablation_hydra=ablation_hydra)
 
     if on_progress:
         on_progress(0.10, "컨테이너 기동 완료, 첫 rollout 생성 대기 중…")
@@ -228,7 +249,7 @@ def run_oneshot(
     new_rollout = _wait_for_new_rollout(pre, on_progress, deadline)
 
     _wait_for_rollout_finalised(new_rollout, on_progress, deadline)
-    _write_meta(new_rollout, driver)
+    _write_meta(new_rollout, driver, ablation_hint)
 
     if on_progress:
         on_progress(1.0, f"✅ 완료 — uuid={new_rollout.rollout_uuid}")
@@ -243,12 +264,30 @@ def latest_rollout_for(scenario_id: str, driver: str) -> RolloutRef | None:
     return None
 
 
+def latest_rollout_for_ablation(
+    scenario_id: str, ablation: str, driver: str = "alpamayo1_5"
+) -> RolloutRef | None:
+    """Most recent rollout for the (scenario, driver, ablation) triple, or None."""
+    for r in existing_rollouts():
+        if (
+            r.scenario_id == scenario_id
+            and r.driver == driver
+            and r.ablation == ablation
+        ):
+            return r
+    return None
+
+
 if __name__ == "__main__":
     import argparse
 
     p = argparse.ArgumentParser()
     p.add_argument("--driver", default="alpamayo1_5")
     p.add_argument("--scene-id", action="append", help="repeatable scene_id override")
+    p.add_argument(
+        "--ablation",
+        help="ablation preset name from kadap-poc/ablation.py PRESETS",
+    )
     p.add_argument("--list", action="store_true")
     p.add_argument(
         "--backfill-driver",
@@ -258,7 +297,10 @@ if __name__ == "__main__":
     args = p.parse_args()
     if args.list:
         for r in existing_rollouts():
-            print(f"{r.scenario_id}/{r.rollout_uuid}  driver={r.driver}  ({r.dir})")
+            print(
+                f"{r.scenario_id}/{r.rollout_uuid}  driver={r.driver}  "
+                f"ablation={r.ablation}  ({r.dir})"
+            )
     elif args.backfill_driver:
         n = 0
         for r in existing_rollouts():
@@ -268,9 +310,15 @@ if __name__ == "__main__":
                 n += 1
         print(f"backfilled {n} rollouts")
     else:
+        ablation_spec = None
+        if args.ablation:
+            from ablation import PRESETS
+
+            ablation_spec = PRESETS[args.ablation]
         out = run_oneshot(
             args.driver,
             on_progress=lambda pct, msg: print(f"[{pct:.0%}] {msg}"),
             scene_ids=args.scene_id,
+            ablation=ablation_spec,
         )
         print(f"DONE: {out.dir}")

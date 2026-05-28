@@ -137,3 +137,52 @@ let the driver warm up.
 
 For the PoC this is the main reason the rollouts look "trivial" — they
 are GT replay with a stalled driver, not genuine closed-loop inference.
+
+---
+
+## Update (2026-05-28): the 14-step termination IS the cu_seqlens_q bug
+
+Re-running with ``runtime.simulation_config.send_recording_ground_truth=true``
+and the [pose-seed driver patch](#pose-seed-driver-patch) below revealed that
+the GT trajectory length is 20 s (202 poses) for every OSS NuRec clip
+inspected. The 14-cycle ceiling is **not** a GT-length issue at all — it is
+the same ``cu_seqlens_q must have shape (batch_size + 1)`` crash this doc
+opens with, fired the moment the driver's pose-history buffer reaches the
+required 1500 ms span and the first real ``sample_trajectories_from_data_with_vlm_rollout``
+call lands. The runtime then unwinds the stack with ``Draining N outstanding
+tasks`` and the rollout ends at whatever cycle the buffer first crossed 1.5 s.
+
+So both findings collapse into the same single upstream issue. PoC v0
+applies two driver-side workarounds in the ``crom592/alpasim`` fork:
+
+### Pose-seed driver patch
+
+``alpasim/src/driver/src/alpasim_driver/main.py:submit_recording_ground_truth``
+no longer drops the GT. When the driver session's pose buffer still falls
+short of 1.6 s, we splice the leading window of GT poses into
+``session.poses`` so the model's 1500 ms history check passes from cycle 0.
+The runtime must also be told to send GT in the first place
+(``runtime.simulation_config.send_recording_ground_truth=true``); the wizard
+default is ``false``. ``scripts/run_closedloop.sh`` sets this override
+automatically.
+
+### SDPA attention workaround
+
+``alpasim/src/driver/src/alpasim_driver/models/alpamayo1_5_model.py`` now
+passes ``attn_implementation="sdpa"`` to
+``Alpamayo1_5.from_pretrained``, overriding the checkpoint's baked-in
+``flash_attention_2``. With the native ``flash_attn`` package not installed,
+transformers falls back to ``kernels-community/flash-attn``, whose
+variable-length attention path is what produces the ``cu_seqlens_q``
+shape error against the driver's batch shapes. SDPA runs entirely inside
+PyTorch SDP / xformers fall-back, gives correct ``cu_seqlens_q`` layout, and
+is acceptable accuracy-wise for a closed-loop PoC demo (accuracy parity vs
+flash-attn-2 is bit-exact within bf16 noise on the matmuls we exercise).
+
+Override via env: ``KADAP_ATTN_IMPL=flash_attention_2`` reverts to upstream
+behaviour for testing.
+
+Upstream-friendly fix would be to either bundle ``flash_attn`` properly in
+the alpasim driver container, or to pin ``transformers`` to a version where
+``kernels-community/flash-attn`` correctly shapes ``cu_seqlens_q`` for
+single-sample batched VLM generation.

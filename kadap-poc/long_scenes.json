@@ -1,0 +1,29 @@
+[
+  {
+    "scene_id": "clipgt-023b7fcc-671c-40e3-9bd2-c66b0b073fbc",
+    "uuid": "e7b5d0ae-9a48-455b-b08e-6c75a99da0a3",
+    "usdz_filename": "587f07cd-f68b-43d8-bced-324c3346036d.usdz",
+    "size_mb": 1474.676651,
+    "duration_s": 20.0,
+    "pose_count": 202,
+    "start_us": 180833912642
+  },
+  {
+    "scene_id": "clipgt-01d503d4-449b-46fc-8d78-9085e70d3554",
+    "uuid": "4f6bf6bb-9696-43b9-a1bf-04e12ccad5cc",
+    "usdz_filename": "5c4e7d14-90c0-4cee-961b-983e4d45db3c.usdz",
+    "size_mb": 1543.180935,
+    "duration_s": 20.0,
+    "pose_count": 202,
+    "start_us": 9299509000
+  },
+  {
+    "scene_id": "clipgt-023b7fcc-671c-40e3-9bd2-c66b0b073fbc",
+    "uuid": "e7b5d0ae-9a48-455b-b08e-6c75a99da0a3",
+    "usdz_filename": "e7b5d0ae-9a48-455b-b08e-6c75a99da0a3.usdz",
+    "size_mb": 1863.00636,
+    "duration_s": 20.0,
+    "pose_count": 202,
+    "start_us": 180833912642
+  }
+]

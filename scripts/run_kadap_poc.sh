@@ -25,17 +25,13 @@ if ! "$VENV_PY" -c "import gradio, alpasim_grpc" 2>/dev/null; then
   (cd "$REPO_ROOT/alpasim" && uv pip install gradio reportlab)
 fi
 
-echo "==> daemon TCP probe (127.0.0.1:50051)"
-if ! timeout 3 bash -c '</dev/tcp/127.0.0.1/50051' 2>/dev/null; then
-  cat >&2 <<'EOF'
-  daemon not reachable.
-  Run, in order:
-    bash scripts/run_closedloop.sh
-    python3 scripts/patch_compose_for_daemon.py
-    docker compose -f alpasim/alpasim/run_dir/docker-compose.yaml up -d
-  Then wait ~10 min for driver-0 to load Alpamayo 1.5 (watch nvidia-smi).
-EOF
-  exit 1
+echo "==> daemon TCP probe (127.0.0.1:50051) — optional in PoC v0 (one-shot mode)"
+if timeout 3 bash -c '</dev/tcp/127.0.0.1/50051' 2>/dev/null; then
+  echo "  daemon up. Daemon-mode client (client.py) available — but blocked by"
+  echo "  upstream cu_seqlens_q bug, so the UI still uses one-shot compose."
+else
+  echo "  daemon not running — fine, PoC v0 uses one-shot runs orchestrated by"
+  echo "  kadap-poc/runner.py via scripts/run_closedloop.sh per simulation."
 fi
 
 echo "==> launching Gradio on ${HOST}:${PORT}"

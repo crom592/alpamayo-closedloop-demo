@@ -62,7 +62,8 @@ def build_report(rollout: RolloutRef) -> Path:
     REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     m = metrics.compute(rollout.asl)
 
-    out = REPORTS_DIR / f"report_{rollout.driver}_{rollout.rollout_uuid[:8]}.pdf"
+    abl = rollout.ablation.replace(" ", "_").replace("/", "_")
+    out = REPORTS_DIR / f"report_{rollout.driver}_{abl}_{rollout.rollout_uuid[:8]}.pdf"
     doc = SimpleDocTemplate(
         str(out),
         pagesize=A4,
@@ -86,6 +87,7 @@ def build_report(rollout: RolloutRef) -> Path:
     meta_rows = [
         ["scenario", rollout.scenario_id],
         ["driver", rollout.driver],
+        ["ablation", rollout.ablation],
         ["rollout uuid", rollout.rollout_uuid],
         ["rollout.asl 크기", f"{rollout.asl.stat().st_size / 1024 / 1024:.2f} MB"],
     ]

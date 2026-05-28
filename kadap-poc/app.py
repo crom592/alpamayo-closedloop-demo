@@ -23,6 +23,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
+import ablation  # noqa: E402
 import metrics  # noqa: E402
 import report  # noqa: E402
 import scenarios  # noqa: E402
@@ -33,6 +34,7 @@ from runner import (  # noqa: E402
     RolloutRef,
     existing_rollouts,
     latest_rollout_for,
+    latest_rollout_for_ablation,
     render_camera_mp4,
     run_oneshot,
 )
@@ -56,6 +58,20 @@ POLICY_CHOICES = [
     ("Manual replay", "manual"),
 ]
 POLICY_LABEL = {key: label for label, key in POLICY_CHOICES}
+
+# Tab ② now compares ablations on the same Alpamayo 1.5 driver instead of
+# different policies (per user feedback: "알파마요만으로 평가" — the demo is
+# about showing Alpamayo + Alpasim closed-loop, not other models).
+ABLATION_LABEL = {
+    "base": "Base (모든 카메라, t0=300ms)",
+    "no_left": "좌측 카메라 마스킹",
+    "no_tele": "전방 망원 마스킹",
+    "front_only": "전방 wide 단독",
+    "start_500ms": "시작 0.5s 지연",
+    "start_2s": "시작 2.0s 지연",
+    "start_5s": "시작 5.0s 지연",
+}
+ABLATION_CHOICES = [(ABLATION_LABEL[k], k) for k in ablation.PRESETS.keys()]
 
 
 # ---- Rollout helpers ----------------------------------------------------
@@ -171,6 +187,63 @@ def _compare_existing(scenario: str, policies: list[str]):
         missing = [p for p in policies[:COMPARE_SLOTS] if latest_rollout_for(scenario, p) is None]
         status += f", {miss}개 미발견 ({', '.join(missing)})"
     return [status] + _compare_outputs(slots)
+
+
+def _ablation_existing(scenario: str, ablations: list[str]):
+    """Look up the most recent rollout for each (scenario, ablation) pair."""
+    if not ablations:
+        return ["ablation 1개 이상 선택"] + _compare_outputs([])
+    slots = []
+    hits = 0
+    for name in ablations[:COMPARE_SLOTS]:
+        r = latest_rollout_for_ablation(scenario, name)
+        label = ABLATION_LABEL.get(name, name)
+        if r is None:
+            slots.append(_slot_for(None, ""))
+        else:
+            slots.append(_slot_for(r, label))
+            hits += 1
+    miss = len(ablations[:COMPARE_SLOTS]) - hits
+    status = f"📁 {hits}/{len(ablations[:COMPARE_SLOTS])}개 ablation 매치"
+    if miss:
+        missing = [
+            n for n in ablations[:COMPARE_SLOTS] if latest_rollout_for_ablation(scenario, n) is None
+        ]
+        status += f" (미발견: {', '.join(missing)})"
+    return [status] + _compare_outputs(slots)
+
+
+def _ablation_run(scenario: str, ablations: list[str], progress=gr.Progress()):
+    """Sequentially run Alpamayo 1.5 on the same scene with N different ablations."""
+    if not ablations:
+        return ["ablation 1개 이상 선택"] + _compare_outputs([])
+    n = min(len(ablations), COMPARE_SLOTS)
+    slots = []
+    for i, name in enumerate(ablations[:n]):
+        base = i / n
+        spec = ablation.PRESETS[name]
+        label = ABLATION_LABEL.get(name, name)
+        try:
+            new = run_oneshot(
+                driver="alpamayo1_5",
+                scene_ids=[scenario] if scenario else None,
+                ablation=spec,
+                on_progress=lambda pct, msg, _b=base, _i=i, _n=n, _l=label: progress(
+                    _b + pct / _n, desc=f"[{_i + 1}/{_n}] {_l}: {msg}"
+                ),
+            )
+            slots.append(_slot_for(new, label))
+        except Exception as e:  # noqa: BLE001
+            slots.append(
+                (
+                    gr.update(value=None, visible=False),
+                    gr.update(
+                        value=f"**{label}**: ❌ {e.__class__.__name__}: {e}",
+                        visible=True,
+                    ),
+                )
+            )
+    return [f"✅ ablation 순차 실행 완료 ({n}개)"] + _compare_outputs(slots)
 
 
 # ---- System-status helpers (Tab ④) --------------------------------------
@@ -345,9 +418,48 @@ def _metrics_for(uuid: str | None):
     axes[2].set_ylabel("jerk (m/s³)")
     axes[2].set_xlabel("sim time (s)")
     axes[2].grid(alpha=0.3)
-    fig.suptitle(f"{r.scenario_id[:14]}… / driver={r.driver}")
+    fig.suptitle(f"{r.scenario_id[:14]}… / driver={r.driver} / abl={r.ablation}")
     fig.tight_layout()
     return summary, fig
+
+
+def _metrics_overlay(uuids: list[str] | None):
+    """Overlay 2–4 rollouts (same scene, different ablations) on one chart."""
+    if not uuids:
+        return "_rollout 2개 이상 선택_", None
+    rollouts: list[RolloutRef] = []
+    for u in uuids[:COMPARE_SLOTS]:
+        r = _find_rollout(u)
+        if r is not None:
+            rollouts.append(r)
+    if len(rollouts) < 2:
+        return "_유효한 rollout 2개 이상 필요_", None
+
+    fig, axes = plt.subplots(3, 1, figsize=(8, 6), sharex=True)
+    rows = ["| ablation | n_steps | avg_speed | max_lat_acc | max_jerk |", "|---|---|---|---|---|"]
+    cmap = plt.get_cmap("tab10")
+    for i, r in enumerate(rollouts):
+        try:
+            m = metrics.compute(r.asl)
+        except Exception:  # noqa: BLE001
+            continue
+        if m.is_empty:
+            continue
+        color = cmap(i % 10)
+        label = f"{r.ablation} [{r.rollout_uuid[:6]}]"
+        axes[0].plot(m.series.t, m.series.speed, color=color, label=label)
+        axes[1].plot(m.series.t, m.series.lateral_accel, color=color)
+        axes[2].plot(m.series.t, m.series.jerk, color=color)
+        rows.append(
+            f"| {r.ablation} | {m.n_steps} | {m.avg_speed:.2f} | "
+            f"{m.max_lateral_accel:.3f} | {m.max_jerk:.3f} |"
+        )
+    axes[0].set_ylabel("speed (m/s)"); axes[0].legend(fontsize=8); axes[0].grid(alpha=0.3)
+    axes[1].set_ylabel("|lat accel| (m/s²)"); axes[1].grid(alpha=0.3)
+    axes[2].set_ylabel("jerk (m/s³)"); axes[2].set_xlabel("sim time (s)"); axes[2].grid(alpha=0.3)
+    fig.suptitle(f"Ablation overlay — {rollouts[0].scenario_id[:18]}…")
+    fig.tight_layout()
+    return "\n".join(rows), fig
 
 
 def _compare_run(scenario: str, policies: list[str], progress=gr.Progress()):
@@ -436,10 +548,12 @@ def build_ui() -> gr.Blocks:
                 outputs=[video, meta_md, run_status],
             ).then(refresh_existing, outputs=existing_dd)
 
-        with gr.Tab("② 정책 비교"):
+        with gr.Tab("② Ablation 비교"):
             gr.Markdown(
-                "**📁 기존 결과로 비교** — 정책별 가장 최신 rollout (kadap_meta.json 의 driver 필드 매치)  \n"
-                "**▶ 순차 실행** — 선택한 정책 N개를 순서대로 단발성 실행 (정책당 ~10–15분)"
+                "**Alpamayo 1.5 고정**, 같은 scene에 ablation 4가지를 나란히.  \n"
+                "**📁 기존 결과로 비교** — (scene, ablation) 쌍별 가장 최신 rollout 매치  \n"
+                "**▶ 순차 실행** — 선택한 ablation N개를 순차적으로 새 rollout 생성 (각 ~10–15분)  \n"
+                "_ablation 이름은 `kadap-poc/ablation.py` PRESETS — 사용 가능한 정의는 새로 추가 가능._"
             )
             with gr.Row():
                 cmp_scn = gr.Dropdown(
@@ -447,14 +561,14 @@ def build_ui() -> gr.Blocks:
                     value=next(iter(SCENARIO_CATALOG)),
                     label="시나리오",
                 )
-                cmp_pols = gr.CheckboxGroup(
-                    choices=POLICY_CHOICES,
-                    value=["alpamayo1_5"],
-                    label="비교할 정책 (최대 4개)",
+                cmp_abls = gr.CheckboxGroup(
+                    choices=ABLATION_CHOICES,
+                    value=["base", "no_left"],
+                    label="비교할 ablation (최대 4개)",
                 )
             with gr.Row():
                 cmp_load_btn = gr.Button("📁 기존 결과로 비교")
-                cmp_run_btn = gr.Button("▶ 순차 실행", variant="primary")
+                cmp_run_btn = gr.Button("▶ ablation 순차 실행", variant="primary")
             cmp_status = gr.Textbox(label="상태", interactive=False, lines=2)
             with gr.Row():
                 cmp_videos = [
@@ -467,26 +581,26 @@ def build_ui() -> gr.Blocks:
                 ]
 
             cmp_load_btn.click(
-                lambda scn, pols: _compare_existing(scn, pols),
-                inputs=[cmp_scn, cmp_pols],
+                _ablation_existing,
+                inputs=[cmp_scn, cmp_abls],
                 outputs=[cmp_status, *cmp_videos, *cmp_metas],
             )
             cmp_run_btn.click(
-                _compare_run,
-                inputs=[cmp_scn, cmp_pols],
+                _ablation_run,
+                inputs=[cmp_scn, cmp_abls],
                 outputs=[cmp_status, *cmp_videos, *cmp_metas],
             )
 
         with gr.Tab("③ 메트릭 대시보드"):
             gr.Markdown(
                 "rollout.asl → controller_return 시계열 추출.  \n"
-                "**v0 메트릭**: 평균/최대 속도, 최대 횡가속도, 최대 jerk."
+                "**단일 rollout** 차트 + **base vs ablation overlay** 차트 두 모드 제공."
             )
             with gr.Row():
                 with gr.Column(scale=1):
                     m_rollout = gr.Dropdown(
                         choices=rollout_choices(),
-                        label="rollout 선택",
+                        label="rollout 선택 (단일)",
                     )
                     m_refresh = gr.Button("↻ 새로고침", size="sm")
                     m_summary = gr.Markdown()
@@ -497,6 +611,30 @@ def build_ui() -> gr.Blocks:
             m_refresh.click(
                 lambda: gr.update(choices=rollout_choices()),
                 outputs=m_rollout,
+            )
+
+            gr.Markdown("---")
+            gr.Markdown("### Ablation overlay — 같은 scene에 다른 ablation 2~4개 겹쳐서 비교")
+            with gr.Row():
+                with gr.Column(scale=1):
+                    m_ovl_rollouts = gr.CheckboxGroup(
+                        choices=rollout_choices(),
+                        label="비교할 rollout (체크 2~4개)",
+                    )
+                    m_ovl_refresh = gr.Button("↻ 새로고침", size="sm")
+                    m_ovl_btn = gr.Button("📊 overlay 차트 생성", variant="primary")
+                    m_ovl_summary = gr.Markdown()
+                with gr.Column(scale=2):
+                    m_ovl_plot = gr.Plot(label="overlay 차트")
+
+            m_ovl_btn.click(
+                _metrics_overlay,
+                inputs=m_ovl_rollouts,
+                outputs=[m_ovl_summary, m_ovl_plot],
+            )
+            m_ovl_refresh.click(
+                lambda: gr.update(choices=rollout_choices()),
+                outputs=m_ovl_rollouts,
             )
 
         with gr.Tab("④ 시스템 상태"):
@@ -571,8 +709,9 @@ def build_ui() -> gr.Blocks:
                 "**NRE → driver → controller 가 매 step 어떻게 연결되어 도는지 확인.**  \n"
                 "rollout 선택 → step slider 로 이동 → 그 step 의 NRE 렌더 4-카메라 + driver 가 낸 예측 "
                 "trajectory 길이 + controller 가 propagate 한 실제 ego pose / 속도 표시.  \n"
-                "_v0 한계: 현 시나리오는 1.5 초 클립 + driver 가 pose history 부족으로 빈 trajectory 를 반환합니다 — "
-                "더 긴 시나리오를 Tab ⑥에서 받아 비교하면 driver 실효 추론이 드러납니다._"
+                "_2026-05-28: pose-seed 패치 + SDPA 워크어라운드 이후 driver 가 실제 trajectory 를 "
+                "내놓는지 cycle 단위로 검증 가능. n_predicted 가 0 보다 크고 step 마다 last_predicted_xy "
+                "가 의미있게 바뀌면 OK._"
             )
             tr_rollout = gr.Dropdown(
                 choices=rollout_choices(), label="rollout 선택", value=None

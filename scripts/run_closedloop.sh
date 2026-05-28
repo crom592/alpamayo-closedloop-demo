@@ -14,8 +14,9 @@ export HF_HOME="${HF_HOME:-$HOME/.cache/huggingface}"
 DRIVER="${DRIVER:-alpamayo1_5}"
 # Wizard, when invoked from $REPO_ROOT/alpasim with wizard.log_dir, resolves
 # the path under that cwd and emits artifacts at .../alpasim/alpasim/run_dir.
-# Mirror that here so the patcher finds the YAML it actually wrote.
-RUN_DIR="${RUN_DIR:-$REPO_ROOT/alpasim/alpasim/run_dir}"
+# Mirror that here so the patcher finds the YAML it actually wrote. Force the
+# absolute path even if .env defines a relative RUN_DIR (legacy override).
+RUN_DIR="$REPO_ROOT/alpasim/alpasim/run_dir"
 SCENE_IDS="${SCENE_IDS:-}"   # optional: pass as '["clipgt-…","clipgt-…"]'
 mkdir -p "$RUN_DIR"
 
@@ -30,12 +31,24 @@ wizard_extra=()
 if [[ -n "$SCENE_IDS" ]]; then
   wizard_extra+=("scenes.scene_ids=$SCENE_IDS")
 fi
+# KADaP PoC: forward extra Hydra overrides (e.g. ablation knobs) via env.
+# ABLATION_HYDRA expects whitespace-separated Hydra k=v pairs.
+if [[ -n "${ABLATION_HYDRA:-}" ]]; then
+  # shellcheck disable=SC2206
+  wizard_extra+=( $ABLATION_HYDRA )
+fi
+# KADaP PoC: enable GT trajectory submit so our patched
+# submit_recording_ground_truth handler can pre-seed pose history.
+# Without this override the wizard default (false) skips the GT push
+# entirely and the driver buffer stays empty for the first 15 cycles.
 uv run alpasim_wizard \
   deploy=local \
   topology=1gpu \
   driver="$DRIVER" \
   wizard.log_dir="$RUN_DIR" \
   wizard.run_method=NONE \
+  runtime.simulation_config.send_recording_ground_truth=true \
+  runtime.simulation_config.time_start_offset_us=1700000 \
   "${wizard_extra[@]}"
 
 compose_file="$RUN_DIR/docker-compose.yaml"
