@@ -1,0 +1,34 @@
+<div class="metrics-summary">
+  <table class="step-meta">
+    <tr><th>driver/ablation</th><td>{{ rollout.driver }}/{{ rollout.ablation }}</td>
+        <th>n_steps</th><td>{{ m.n_steps }}</td></tr>
+    <tr><th>시뮬 시간</th><td>{{ "%.2f"|format(m.duration_s) }} s</td>
+        <th>avg speed</th><td>{{ "%.2f"|format(m.avg_speed) }} m/s</td></tr>
+    <tr><th>max speed</th><td>{{ "%.2f"|format(m.max_speed) }} m/s</td>
+        <th>max lat accel</th><td>{{ "%.3f"|format(m.max_lateral_accel) }} m/s²</td></tr>
+    <tr><th>max jerk</th><td>{{ "%.2f"|format(m.max_jerk) }} m/s³</td><td colspan="2"></td></tr>
+  </table>
+</div>
+<div id="metrics-single-plot" style="height:380px"></div>
+<script>
+  (function() {
+    var t = {{ t|tojson }};
+    var speed = {{ speed|tojson }};
+    var lat = {{ lat|tojson }};
+    var jerk = {{ jerk|tojson }};
+    var traces = [
+      {x: t, y: speed, name: 'speed (m/s)', yaxis: 'y1', line: {color: '#003366'}},
+      {x: t, y: lat, name: '|lat acc| (m/s²)', yaxis: 'y2', line: {color: '#d4a017'}},
+      {x: t, y: jerk, name: 'jerk (m/s³)', yaxis: 'y3', line: {color: '#c0392b'}}
+    ];
+    var layout = {
+      margin: {l: 50, r: 50, t: 10, b: 40},
+      xaxis: {title: 'sim time (s)', domain: [0.08, 0.97]},
+      yaxis: {title: 'speed', side: 'left'},
+      yaxis2: {title: 'lat', overlaying: 'y', side: 'right', position: 0.92},
+      yaxis3: {title: 'jerk', overlaying: 'y', side: 'right', position: 0.98, anchor: 'free'},
+      legend: {orientation: 'h', y: -0.18}
+    };
+    if (window.Plotly) Plotly.newPlot('metrics-single-plot', traces, layout, {displayModeBar: false, responsive: true});
+  })();
+</script>

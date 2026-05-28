@@ -1,0 +1,55 @@
+<div class="trace-step">
+  <table class="step-meta">
+    <tr><th>step</th><td>{{ step_idx }}</td>
+        <th>sim_time</th><td>{{ "%.2f"|format(step.sim_time_s) }} s</td></tr>
+    <tr><th>ego pose</th><td>({{ "%.2f"|format(step.ego_xy[0]) }}, {{ "%.2f"|format(step.ego_xy[1]) }})</td>
+        <th>ego speed</th><td>{{ "%.2f"|format(step.ego_speed) }} m/s</td></tr>
+    <tr><th>driver 예측</th><td colspan="3">
+      {% if step.n_predicted and step.last_predicted_xy %}
+      {{ step.n_predicted }} waypoints, last = ({{ "%.2f"|format(step.last_predicted_xy[0]) }}, {{ "%.2f"|format(step.last_predicted_xy[1]) }})
+      {% else %}<strong>빈 trajectory</strong> (pose history 부족 가능){% endif %}
+    </td></tr>
+  </table>
+
+  <div id="trace-traj-plot" style="height:280px"></div>
+
+  <div class="cam-grid">
+    {% for c in cams %}
+    <div class="cam">
+      <div class="cam-label">{{ c.id }}</div>
+      {% if c.url %}<img src="{{ c.url }}" alt="{{ c.id }}">{% else %}<div class="muted">캐시 없음</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<script>
+  (function() {
+    var trace_ego = {
+      x: {{ ego_xs|tojson }},
+      y: {{ ego_ys|tojson }},
+      mode: 'lines+markers',
+      name: 'ego (last 20 steps)',
+      line: {color: '#003366', width: 2},
+      marker: {size: 5}
+    };
+    var traces = [trace_ego];
+    {% if pred_xy %}
+    traces.push({
+      x: [{{ ego_xs[-1] if ego_xs else 0 }}, {{ ego_xs[-1] if ego_xs else 0 }} + {{ pred_xy[0] }}],
+      y: [{{ ego_ys[-1] if ego_ys else 0 }}, {{ ego_ys[-1] if ego_ys else 0 }} + {{ pred_xy[1] }}],
+      mode: 'lines+markers',
+      name: 'driver pred (waypoint)',
+      line: {color: '#d4a017', width: 2, dash: 'dash'},
+      marker: {size: 6}
+    });
+    {% endif %}
+    var layout = {
+      margin: {l: 40, r: 10, t: 10, b: 30},
+      xaxis: {title: 'x (m)', zeroline: false},
+      yaxis: {title: 'y (m)', zeroline: false, scaleanchor: 'x'},
+      legend: {orientation: 'h', y: -0.2}
+    };
+    if (window.Plotly) Plotly.newPlot('trace-traj-plot', traces, layout, {displayModeBar: false, responsive: true});
+  })();
+</script>

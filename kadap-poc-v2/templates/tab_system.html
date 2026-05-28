@@ -1,0 +1,33 @@
+<section class="card">
+  <h2>ⓘ 시스템 구성 / 상태</h2>
+  <p class="muted">
+    어댑터 / 모델 / 지표 / 한계 / 1차년도 fine-tuning 연계 사항.
+    실시간 docker 컨테이너 + GPU 상태 + 시나리오 카탈로그 포함.
+  </p>
+
+  <h3>실시간 상태</h3>
+  <button class="btn btn-primary"
+          hx-get="/system/refresh" hx-target="#sys-status" hx-trigger="load,click">
+    🔄 새로고침
+  </button>
+  <div id="sys-status"></div>
+
+  <h3 style="margin-top:1.5rem;">시나리오 카탈로그</h3>
+  <button class="btn"
+          hx-get="/system/catalog" hx-target="#sys-catalog" hx-trigger="load,click">
+    ↻ 카탈로그 갱신
+  </button>
+  <div id="sys-catalog"></div>
+
+  <h3 style="margin-top:1.5rem;">시스템 구성</h3>
+  <table class="step-meta">
+    <tr><th>차량 데이터 어댑터</th><td>physical_aiavdataset parquet (US California)</td>
+        <th>V2X 어댑터</th><td>operator 자연어 입력 → "Turn left in Nm" 캐노니컬 포맷</td></tr>
+    <tr><th>모델</th><td colspan="3"><strong>NVIDIA Alpamayo 1.5 (10B)</strong> — VLM(Cosmos-Reason2 8B) + Trajectory Expert(2B)</td></tr>
+    <tr><th>평가 지표</th><td colspan="3">ADE / FDE / Max lateral deviation / Heading error</td></tr>
+    <tr><th>클로즈드루프</th><td colspan="3">Alpasim + NVIDIA NRE (NeuroRenderEngine) on A40 — KADaP 자동차산업클라우드</td></tr>
+    <tr><th>한계 ① 데이터 도메인</th><td colspan="3">미국 NuRec 클립 → 1차년도 한국 도로/V2X 메시지 fine-tuning</td></tr>
+    <tr><th>한계 ② nav 포맷</th><td colspan="3">"Turn {left/right} in Nm" 캐노니컬만 학습 → 한국형 V2X 메시지 어댑터 + LoRA 어댑테이션</td></tr>
+    <tr><th>한계 ③ latency</th><td colspan="3">~5초/forward → 2차년도 TensorRT + distillation</td></tr>
+  </table>
+</section>

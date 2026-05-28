@@ -1,0 +1,20 @@
+<div class="job-card"
+     {% if job.state == 'running' %}
+     hx-get="/closedloop/run/{{ job_id }}" hx-trigger="every 5s" hx-target="this" hx-swap="outerHTML"
+     {% endif %}>
+  <div class="job-header">
+    <span class="state state-{{ job.state }}">
+      {% if job.state == 'running' %}⏳{% elif job.state == 'done' %}✅{% else %}❌{% endif %}
+      NRE: {{ job.state }}
+    </span>
+    <span class="muted">V2X: <strong>"{{ job.v2x_text }}"</strong></span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width: {{ (job.pct * 100)|round(0) }}%"></div></div>
+  <div class="job-msg">{{ "%.0f%%"|format(job.pct * 100) }} — {{ job.msg }}</div>
+  {% if job.state == 'done' %}
+  <div class="job-result">
+    완료된 rollout: <code>{{ job.rollout_uuid }}</code>
+    <a href="#" hx-get="/tab/closedloop" hx-target="#content">→ ⑥ 클로즈드루프 탭에서 확인</a>
+  </div>
+  {% endif %}
+</div>

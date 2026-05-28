@@ -66,6 +66,11 @@ def patch_compose(path: Path, hf_token: str, daemon: bool) -> None:
     data = yaml.safe_load(path.read_text())
     services = data.get("services") or {}
 
+    # KADaP PoC: propagate V2X natural-language instruction (e.g. "Turn left
+    # in 11m") to driver-0 via KADAP_NAV_TEXT. Driver's Session.create reads
+    # it; alpamayo1_5_model._create_chat_message wraps it for the VLM.
+    nav_text = os.environ.get("KADAP_NAV_TEXT", "").strip()
+
     for name, svc in services.items():
         env = svc.get("environment") or {}
         if isinstance(env, list):
@@ -73,6 +78,8 @@ def patch_compose(path: Path, hf_token: str, daemon: bool) -> None:
         env["HF_TOKEN"] = hf_token
         env["HUGGING_FACE_HUB_TOKEN"] = hf_token
         env.update(ENV_VARS_FOR_ALL_SERVICES)
+        if nav_text and name.startswith("driver-"):
+            env["KADAP_NAV_TEXT"] = nav_text
         svc["environment"] = env
 
     if daemon:

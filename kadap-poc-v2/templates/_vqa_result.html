@@ -1,0 +1,43 @@
+<div class="vqa-result-grid">
+  <div class="vqa-bev">
+    <h3>BEV (Bird's Eye View) — GT 대비 예측 궤적</h3>
+    <img src="/vqa/img/{{ token }}/bev" alt="BEV plot" style="max-width: 100%;">
+  </div>
+  <div class="vqa-cam">
+    <h3>front_wide_120fov 입력 (모델이 본 화면)</h3>
+    <img src="/vqa/img/{{ token }}/cam" alt="camera" style="max-width: 100%;">
+  </div>
+</div>
+
+<div class="vqa-meta">
+  <p class="muted">
+    시나리오 <code>[{{ result.scenario._idx }}] {{ result.scenario._category }}</code> ·
+    거리 {{ "%.1f"|format(result.scenario.distance_m) }}m ·
+    clip <code>{{ result.scenario.clip_id[:12] }}…</code> ·
+    V2X 입력: <strong>"{{ result.v2x_text }}"</strong>
+  </p>
+</div>
+
+<table class="step-meta vqa-metrics">
+  <thead>
+    <tr><th>조건</th><th>ADE (m)</th><th>FDE (m)</th><th>max lat dev (m)</th><th>heading err (°)</th></tr>
+  </thead>
+  <tbody>
+    {% for row in result.rows %}
+    <tr>
+      <td>{{ row.condition }}</td>
+      <td>{{ "%.2f"|format(row.metrics.ADE) }}</td>
+      <td>{{ "%.2f"|format(row.metrics.FDE) }}</td>
+      <td>{{ "%.2f"|format(row.metrics.max_lat_dev) }}</td>
+      <td>{{ "%.1f"|format(row.metrics.heading_err_deg) }}</td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+{% for row in result.rows %}
+<div class="cot-card">
+  <h4>{{ row.condition }}</h4>
+  <p class="cot-text">{{ row.cot or '_(Chain-of-Causation 없음)_' }}</p>
+</div>
+{% endfor %}

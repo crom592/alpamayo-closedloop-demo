@@ -1,0 +1,25 @@
+<section class="card">
+  <h2>시나리오 카탈로그</h2>
+  <p class="muted">
+    총 <strong>{{ summary.total }}</strong> · 로컬 <strong>{{ summary.local }}</strong> · 원격 <strong>{{ summary.remote }}</strong> ·
+    소스: <code>{{ summary.csv }}</code> · (처음 50개 표시)
+  </p>
+  <table class="catalog">
+    <thead><tr><th></th><th>scene_id</th><th></th></tr></thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>{% if r.is_local %}✅{% else %}⬇{% endif %}</td>
+        <td><code>{{ r.scene_short }}…</code></td>
+        <td>
+          {% if not r.is_local %}
+          <button class="btn" hx-post="/catalog/download" hx-target="#cat-result"
+                  hx-vals='{"scene_id": "{{ r.scene_id }}"}'>다운로드</button>
+          {% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div id="cat-result"></div>
+</section>

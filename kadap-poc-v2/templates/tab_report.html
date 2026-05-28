@@ -1,0 +1,20 @@
+<section class="card">
+  <h2>PDF 리포트 export</h2>
+  <p class="muted">단일 rollout → A4 1페이지: 메타 + 시계열 plot.</p>
+  <form class="inline">
+    <select name="uuid" id="report-uuid">
+      <option value="">— rollout 선택 —</option>
+      {% for r in rollouts %}
+      <option value="{{ r.uuid }}">{{ r.uuid_short }}… ({{ r.driver }}/{{ r.ablation }}, {{ "%.1f"|format(r.asl_mb) }} MB)</option>
+      {% endfor %}
+    </select>
+    <button type="button" class="btn btn-primary"
+            hx-post="/report/build"
+            hx-target="#report-result"
+            hx-include="#report-uuid"
+            hx-vals='js:{"uuid": document.getElementById("report-uuid").value}'>
+      📄 PDF 생성
+    </button>
+  </form>
+  <div id="report-result"></div>
+</section>

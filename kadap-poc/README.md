@@ -1,12 +1,12 @@
 # KADaP Alpamayo PoC (한자연 납품용 자율주행 테스트베드)
 
-한국자동차연구원(KATRI) PoC용 인터랙티브 closed-loop 시뮬레이션 UI.
+한국자동차연구원(KATECH, Korea Automotive Technology Institute) 납품용 인터랙티브 closed-loop 시뮬레이션 UI.
 NVIDIA Alpamayo 1.5 + Alpasim + NRE를 KADaP A40 노드에서 띄우고, Gradio
 프론트엔드에서 시나리오와 ablation 을 선택해 실행한다.
 
 PoC의 핵심 메시지: **"변경된 정보 → 다른 판단"** — 같은 시나리오에 다른
 ablation(카메라 마스크, 시작 offset 등)을 넣었을 때 Alpamayo 1.5 추론이
-실제로 다른 trajectory를 내놓는다는 걸 KATRI 연구원이 자기 손으로
+실제로 다른 trajectory를 내놓는다는 걸 KATECH 연구원이 자기 손으로
 확인하게 만든다.
 
 ## 구조

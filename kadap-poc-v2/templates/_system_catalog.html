@@ -1,0 +1,15 @@
+<p class="muted">
+  총 <strong>{{ summary.total }}</strong> · 로컬 <strong>{{ summary.local }}</strong> · 원격 <strong>{{ summary.remote }}</strong> ·
+  <code>{{ summary.csv }}</code> · 처음 50개 표시
+</p>
+<table class="catalog">
+  <thead><tr><th></th><th>scene_id</th></tr></thead>
+  <tbody>
+    {% for r in rows %}
+    <tr>
+      <td>{% if r.is_local %}✅{% else %}⬇{% endif %}</td>
+      <td><code>{{ r.scene_short }}…</code></td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>

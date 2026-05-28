@@ -1,0 +1,13 @@
+<div class="rollout-card">
+  <div class="meta">
+    <div><strong>scenario:</strong> <code>{{ rollout.scenario_id }}</code></div>
+    <div><strong>uuid:</strong> <code>{{ rollout.uuid }}</code></div>
+    <div><strong>driver / ablation:</strong> <code>{{ rollout.driver }}</code> / <code>{{ rollout.ablation }}</code></div>
+    <div><strong>rollout.asl:</strong> {{ "%.1f"|format(rollout.asl_mb) }} MB</div>
+  </div>
+  {% if mp4_url %}
+  <video src="{{ mp4_url }}" controls preload="metadata" style="max-width: 100%;"></video>
+  {% else %}
+  <div class="muted">MP4 캐시 없음 (변환 실패 가능성)</div>
+  {% endif %}
+</div>

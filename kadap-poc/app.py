@@ -1,4 +1,4 @@
-"""KADaP Alpamayo PoC — interactive closed-loop testbed for KATRI.
+"""KADaP Alpamayo PoC — interactive closed-loop testbed for KATECH.
 
 PoC v0 Gradio frontend. Each tab is added incrementally:
     ① 시나리오 평가   — existing rollout preview + one-shot trigger
@@ -99,7 +99,7 @@ def preview_rollout(uuid: str | None):
     r = _find_rollout(uuid)
     if r is None:
         return None, f"❌ rollout {uuid} 디스크에 없음", ""
-    mp4 = render_camera_mp4(r)
+    mp4 = render_camera_mp4(r, force=True)
     meta = (
         f"**scenario**: `{r.scenario_id}`  \n"
         f"**uuid**: `{r.rollout_uuid}`  \n"
@@ -118,7 +118,7 @@ def trigger_oneshot(driver: str, scenario: str, progress=gr.Progress()):
         )
     except Exception as e:
         return None, f"❌ 실행 실패: {e.__class__.__name__}: {e}", ""
-    mp4 = render_camera_mp4(new)
+    mp4 = render_camera_mp4(new, force=True)
     meta = (
         f"**scenario**: `{new.scenario_id}`  \n"
         f"**uuid**: `{new.rollout_uuid}`  \n"
@@ -144,7 +144,7 @@ def _slot_for(rollout: RolloutRef | None, label: str):
             gr.update(value=None, visible=False),
             gr.update(value=None, visible=False),
         )
-    mp4 = render_camera_mp4(rollout)
+    mp4 = render_camera_mp4(rollout, force=True)
     meta = (
         f"**{label}**  \n"
         f"uuid `{rollout.rollout_uuid[:12]}…`  •  "
@@ -351,11 +351,15 @@ def sys_container_log(substr: str, tail: int) -> str:
 
 
 def sys_latest_rollouts(n: int = 4) -> list[str | None]:
-    """Latest N rollout MP4s — auto-renders missing ones via asl_to_frames."""
+    """Latest N rollout MP4s — cached only; no blocking conversion at page load.
+
+    Returns ``None`` for rollouts whose MP4 hasn't been materialised yet. To
+    extract frames the user can hit Tab ⑥'s "📷 frames 추출 / 갱신" button.
+    """
     rollouts = existing_rollouts()[:n]
     mp4s: list[str | None] = []
     for r in rollouts:
-        p = render_camera_mp4(r)
+        p = render_camera_mp4(r, force=False)  # cache-only
         mp4s.append(str(p) if p else None)
     while len(mp4s) < n:
         mp4s.append(None)
@@ -548,354 +552,184 @@ def build_ui() -> gr.Blocks:
                 outputs=[video, meta_md, run_status],
             ).then(refresh_existing, outputs=existing_dd)
 
-        with gr.Tab("② Ablation 비교"):
-            gr.Markdown(
-                "**Alpamayo 1.5 고정**, 같은 scene에 ablation 4가지를 나란히.  \n"
-                "**📁 기존 결과로 비교** — (scene, ablation) 쌍별 가장 최신 rollout 매치  \n"
-                "**▶ 순차 실행** — 선택한 ablation N개를 순차적으로 새 rollout 생성 (각 ~10–15분)  \n"
-                "_ablation 이름은 `kadap-poc/ablation.py` PRESETS — 사용 가능한 정의는 새로 추가 가능._"
-            )
-            with gr.Row():
-                cmp_scn = gr.Dropdown(
-                    choices=[(v["label"], k) for k, v in SCENARIO_CATALOG.items()],
-                    value=next(iter(SCENARIO_CATALOG)),
-                    label="시나리오",
+        with gr.Tab("② Ablation 비교") as _t2:
+            with gr.Group(visible=False) as _g2:
+                gr.Markdown(
+                    "**Alpamayo 1.5 고정**, 같은 scene에 ablation 4가지를 나란히.  \n"
+                    "**📁 기존 결과로 비교** — (scene, ablation) 쌍별 가장 최신 rollout 매치  \n"
+                    "**▶ 순차 실행** — 선택한 ablation N개를 순차적으로 새 rollout 생성 (각 ~10–15분)  \n"
+                    "_ablation 이름은 `kadap-poc/ablation.py` PRESETS — 사용 가능한 정의는 새로 추가 가능._"
                 )
-                cmp_abls = gr.CheckboxGroup(
-                    choices=ABLATION_CHOICES,
-                    value=["base", "no_left"],
-                    label="비교할 ablation (최대 4개)",
+                with gr.Row():
+                    cmp_scn = gr.Dropdown(
+                        choices=[(v["label"], k) for k, v in SCENARIO_CATALOG.items()],
+                        value=next(iter(SCENARIO_CATALOG)),
+                        label="시나리오",
+                    )
+                    cmp_abls = gr.CheckboxGroup(
+                        choices=ABLATION_CHOICES,
+                        value=["base", "no_left"],
+                        label="비교할 ablation (최대 4개)",
+                    )
+                with gr.Row():
+                    cmp_load_btn = gr.Button("📁 기존 결과로 비교")
+                    cmp_run_btn = gr.Button("▶ ablation 순차 실행", variant="primary")
+                cmp_status = gr.Textbox(label="상태", interactive=False, lines=2)
+                with gr.Row():
+                    cmp_videos = [
+                        gr.Video(label=f"슬롯 {i + 1}", visible=False, height=240)
+                        for i in range(COMPARE_SLOTS)
+                    ]
+                with gr.Row():
+                    cmp_metas = [
+                        gr.Markdown(visible=False) for _ in range(COMPARE_SLOTS)
+                    ]
+
+                cmp_load_btn.click(
+                    _ablation_existing,
+                    inputs=[cmp_scn, cmp_abls],
+                    outputs=[cmp_status, *cmp_videos, *cmp_metas],
                 )
-            with gr.Row():
-                cmp_load_btn = gr.Button("📁 기존 결과로 비교")
-                cmp_run_btn = gr.Button("▶ ablation 순차 실행", variant="primary")
-            cmp_status = gr.Textbox(label="상태", interactive=False, lines=2)
-            with gr.Row():
-                cmp_videos = [
-                    gr.Video(label=f"슬롯 {i + 1}", visible=False, height=240)
-                    for i in range(COMPARE_SLOTS)
+                cmp_run_btn.click(
+                    _ablation_run,
+                    inputs=[cmp_scn, cmp_abls],
+                    outputs=[cmp_status, *cmp_videos, *cmp_metas],
+                )
+
+            _t2.select(lambda: gr.update(visible=True), outputs=_g2)
+        with gr.Tab("⑥ 🔬 closed-loop trace") as _t6:
+            with gr.Group(visible=False) as _g6:
+                gr.Markdown(
+                    "**NRE → driver → controller 가 매 step 어떻게 연결되어 도는지 확인.**  \n"
+                    "rollout 선택 → step slider 로 이동 → 그 step 의 NRE 렌더 4-카메라 + driver 가 낸 예측 "
+                    "trajectory 길이 + controller 가 propagate 한 실제 ego pose / 속도 표시.  \n"
+                    "_2026-05-28: pose-seed 패치 + SDPA 워크어라운드 이후 driver 가 실제 trajectory 를 "
+                    "내놓는지 cycle 단위로 검증 가능. n_predicted 가 0 보다 크고 step 마다 last_predicted_xy "
+                    "가 의미있게 바뀌면 OK._"
+                )
+                tr_rollout = gr.Dropdown(
+                    choices=rollout_choices(), label="rollout 선택", value=None
+                )
+                with gr.Row():
+                    tr_refresh = gr.Button("↻ rollout 목록 새로고침", size="sm")
+                    tr_extract = gr.Button("📷 frames 추출 / 갱신", size="sm")
+                tr_status = gr.Markdown("_rollout 선택_")
+                tr_step = gr.Slider(0, 1, value=0, step=1, label="step idx", interactive=True)
+                tr_meta = gr.Markdown()
+                with gr.Row():
+                    tr_cam_fw = gr.Image(label="front_wide_120fov", height=220)
+                    tr_cam_ft = gr.Image(label="front_tele_30fov", height=220)
+                with gr.Row():
+                    tr_cam_cl = gr.Image(label="cross_left_120fov", height=220)
+                    tr_cam_cr = gr.Image(label="cross_right_120fov", height=220)
+
+                CAM_ORDER = [
+                    "camera_front_wide_120fov",
+                    "camera_front_tele_30fov",
+                    "camera_cross_left_120fov",
+                    "camera_cross_right_120fov",
                 ]
-            with gr.Row():
-                cmp_metas = [
-                    gr.Markdown(visible=False) for _ in range(COMPARE_SLOTS)
-                ]
 
-            cmp_load_btn.click(
-                _ablation_existing,
-                inputs=[cmp_scn, cmp_abls],
-                outputs=[cmp_status, *cmp_videos, *cmp_metas],
-            )
-            cmp_run_btn.click(
-                _ablation_run,
-                inputs=[cmp_scn, cmp_abls],
-                outputs=[cmp_status, *cmp_videos, *cmp_metas],
-            )
+                def _trace_cameras(uuid, step_idx):
+                    r = _find_rollout(uuid) if uuid else None
+                    if r is None:
+                        return [None] * 4
+                    cams = trace.step_cameras(r, int(step_idx))
+                    return [str(cams[k]) if k in cams else None for k in CAM_ORDER]
 
-        with gr.Tab("③ 메트릭 대시보드"):
-            gr.Markdown(
-                "rollout.asl → controller_return 시계열 추출.  \n"
-                "**단일 rollout** 차트 + **base vs ablation overlay** 차트 두 모드 제공."
-            )
-            with gr.Row():
-                with gr.Column(scale=1):
-                    m_rollout = gr.Dropdown(
-                        choices=rollout_choices(),
-                        label="rollout 선택 (단일)",
+                def _trace_meta_md(uuid, step_idx):
+                    r = _find_rollout(uuid) if uuid else None
+                    if r is None:
+                        return "_rollout 미선택_"
+                    steps = trace.parse_steps(r)
+                    if not steps or int(step_idx) >= len(steps):
+                        return "_step 정보 없음_"
+                    s = steps[int(step_idx)]
+                    pred_txt = (
+                        f"{s.n_predicted} waypoints, last=({s.last_predicted_xy[0]:.2f}, {s.last_predicted_xy[1]:.2f})"
+                        if s.n_predicted and s.last_predicted_xy
+                        else "**빈 trajectory** (pose history 부족 가능성)"
                     )
-                    m_refresh = gr.Button("↻ 새로고침", size="sm")
-                    m_summary = gr.Markdown()
-                with gr.Column(scale=2):
-                    m_plot = gr.Plot(label="시계열 (속도 / 횡가속도 / jerk)")
-
-            m_rollout.change(_metrics_for, inputs=m_rollout, outputs=[m_summary, m_plot])
-            m_refresh.click(
-                lambda: gr.update(choices=rollout_choices()),
-                outputs=m_rollout,
-            )
-
-            gr.Markdown("---")
-            gr.Markdown("### Ablation overlay — 같은 scene에 다른 ablation 2~4개 겹쳐서 비교")
-            with gr.Row():
-                with gr.Column(scale=1):
-                    m_ovl_rollouts = gr.CheckboxGroup(
-                        choices=rollout_choices(),
-                        label="비교할 rollout (체크 2~4개)",
-                    )
-                    m_ovl_refresh = gr.Button("↻ 새로고침", size="sm")
-                    m_ovl_btn = gr.Button("📊 overlay 차트 생성", variant="primary")
-                    m_ovl_summary = gr.Markdown()
-                with gr.Column(scale=2):
-                    m_ovl_plot = gr.Plot(label="overlay 차트")
-
-            m_ovl_btn.click(
-                _metrics_overlay,
-                inputs=m_ovl_rollouts,
-                outputs=[m_ovl_summary, m_ovl_plot],
-            )
-            m_ovl_refresh.click(
-                lambda: gr.update(choices=rollout_choices()),
-                outputs=m_ovl_rollouts,
-            )
-
-        with gr.Tab("④ 시스템 상태"):
-            gr.Markdown(
-                "**closed-loop 컨테이너 5종 + GPU + 최신 rollout 4분할 라이브 모니터.**  \n"
-                "수동 새로고침 — 시뮬 중에는 GPU util과 driver/controller 로그가 가장 의미 있음."
-            )
-            with gr.Row():
-                with gr.Column(scale=1):
-                    sys_health = gr.Markdown()
-                    sys_gpu = gr.Markdown()
-                    sys_btn = gr.Button("🔄 새로고침", variant="primary")
-                    gr.Markdown("---\n### driver-0 (Alpamayo 1.5 추론)")
-                    sys_drv = gr.Markdown()
-                with gr.Column(scale=2):
-                    gr.Markdown("### controller-0 (orchestration)")
-                    sys_ctrl = gr.Markdown()
-                    gr.Markdown("### 최신 rollout MP4 (NRE 렌더링 결과)")
-                    sys_meta = gr.Markdown()
-                    with gr.Row():
-                        sys_v1 = gr.Video(label="#1 (최신)", height=220)
-                        sys_v2 = gr.Video(label="#2", height=220)
-                    with gr.Row():
-                        sys_v3 = gr.Video(label="#3", height=220)
-                        sys_v4 = gr.Video(label="#4", height=220)
-            sys_outs = [
-                sys_health, sys_gpu, sys_ctrl, sys_drv,
-                sys_meta, sys_v1, sys_v2, sys_v3, sys_v4,
-            ]
-            sys_btn.click(sys_refresh, outputs=sys_outs)
-            demo.load(sys_refresh, outputs=sys_outs)
-
-        with gr.Tab("⑤ 📄 리포트 export"):
-            gr.Markdown(
-                "선택한 rollout의 메타 + 메트릭 + 시계열 plot 을 한 페이지 PDF로 생성. "
-                "한자연 납품용 1-pager."
-            )
-            with gr.Row():
-                with gr.Column(scale=1):
-                    rep_rollout = gr.Dropdown(
-                        choices=rollout_choices(), label="rollout 선택"
-                    )
-                    rep_refresh = gr.Button("↻ 새로고침", size="sm")
-                    rep_btn = gr.Button("📄 PDF 생성", variant="primary")
-                    rep_status = gr.Markdown()
-                with gr.Column(scale=1):
-                    rep_file = gr.File(label="다운로드", interactive=False)
-
-            def _gen_report(uuid):
-                if not uuid:
-                    return "_rollout을 선택하세요_", None
-                r = _find_rollout(uuid)
-                if r is None:
-                    return f"❌ rollout {uuid} 없음", None
-                try:
-                    pdf = report.build_report(r)
-                except Exception as e:
-                    return f"❌ 생성 실패: {e.__class__.__name__}: {e}", None
-                return (
-                    f"✅ `{pdf.name}` 생성 ({pdf.stat().st_size / 1024:.1f} KB)",
-                    str(pdf),
-                )
-
-            rep_btn.click(_gen_report, inputs=rep_rollout, outputs=[rep_status, rep_file])
-            rep_refresh.click(
-                lambda: gr.update(choices=rollout_choices()),
-                outputs=rep_rollout,
-            )
-
-        with gr.Tab("⑥ 🔬 closed-loop trace"):
-            gr.Markdown(
-                "**NRE → driver → controller 가 매 step 어떻게 연결되어 도는지 확인.**  \n"
-                "rollout 선택 → step slider 로 이동 → 그 step 의 NRE 렌더 4-카메라 + driver 가 낸 예측 "
-                "trajectory 길이 + controller 가 propagate 한 실제 ego pose / 속도 표시.  \n"
-                "_2026-05-28: pose-seed 패치 + SDPA 워크어라운드 이후 driver 가 실제 trajectory 를 "
-                "내놓는지 cycle 단위로 검증 가능. n_predicted 가 0 보다 크고 step 마다 last_predicted_xy "
-                "가 의미있게 바뀌면 OK._"
-            )
-            tr_rollout = gr.Dropdown(
-                choices=rollout_choices(), label="rollout 선택", value=None
-            )
-            with gr.Row():
-                tr_refresh = gr.Button("↻ rollout 목록 새로고침", size="sm")
-                tr_extract = gr.Button("📷 frames 추출 / 갱신", size="sm")
-            tr_status = gr.Markdown("_rollout 선택_")
-            tr_step = gr.Slider(0, 1, value=0, step=1, label="step idx", interactive=True)
-            tr_meta = gr.Markdown()
-            with gr.Row():
-                tr_cam_fw = gr.Image(label="front_wide_120fov", height=220)
-                tr_cam_ft = gr.Image(label="front_tele_30fov", height=220)
-            with gr.Row():
-                tr_cam_cl = gr.Image(label="cross_left_120fov", height=220)
-                tr_cam_cr = gr.Image(label="cross_right_120fov", height=220)
-
-            CAM_ORDER = [
-                "camera_front_wide_120fov",
-                "camera_front_tele_30fov",
-                "camera_cross_left_120fov",
-                "camera_cross_right_120fov",
-            ]
-
-            def _trace_cameras(uuid, step_idx):
-                r = _find_rollout(uuid) if uuid else None
-                if r is None:
-                    return [None] * 4
-                cams = trace.step_cameras(r, int(step_idx))
-                return [str(cams[k]) if k in cams else None for k in CAM_ORDER]
-
-            def _trace_meta_md(uuid, step_idx):
-                r = _find_rollout(uuid) if uuid else None
-                if r is None:
-                    return "_rollout 미선택_"
-                steps = trace.parse_steps(r)
-                if not steps or int(step_idx) >= len(steps):
-                    return "_step 정보 없음_"
-                s = steps[int(step_idx)]
-                pred_txt = (
-                    f"{s.n_predicted} waypoints, last=({s.last_predicted_xy[0]:.2f}, {s.last_predicted_xy[1]:.2f})"
-                    if s.n_predicted and s.last_predicted_xy
-                    else "**빈 trajectory** (pose history 부족 가능성)"
-                )
-                return (
-                    f"### step {s.step_idx} / sim_time {s.sim_time_s:.2f}s\n\n"
-                    f"| 항목 | 값 |\n|---|---|\n"
-                    f"| timestamp_us | {s.timestamp_us} |\n"
-                    f"| ego pose (x, y) | ({s.ego_xy[0]:.2f}, {s.ego_xy[1]:.2f}) |\n"
-                    f"| ego speed | {s.ego_speed:.2f} m/s |\n"
-                    f"| driver 예측 trajectory | {pred_txt} |\n"
-                )
-
-            def _trace_load(uuid):
-                if not uuid:
                     return (
-                        gr.update(maximum=1, value=0),
-                        "_rollout 선택_",
-                        "_rollout 미선택_",
-                        None, None, None, None,
+                        f"### step {s.step_idx} / sim_time {s.sim_time_s:.2f}s\n\n"
+                        f"| 항목 | 값 |\n|---|---|\n"
+                        f"| timestamp_us | {s.timestamp_us} |\n"
+                        f"| ego pose (x, y) | ({s.ego_xy[0]:.2f}, {s.ego_xy[1]:.2f}) |\n"
+                        f"| ego speed | {s.ego_speed:.2f} m/s |\n"
+                        f"| driver 예측 trajectory | {pred_txt} |\n"
                     )
-                r = _find_rollout(uuid)
-                if r is None:
-                    return (gr.update(maximum=1, value=0), f"❌ {uuid} 없음", "", None, None, None, None)
-                # ensure frames present; cheap if cached
-                trace.ensure_frames_extracted(r)
-                steps = trace.parse_steps(r)
-                n = max(1, len(steps) - 1)  # slider needs min<max even when empty
-                cams = _trace_cameras(uuid, 0)
-                meta = _trace_meta_md(uuid, 0)
-                status = f"✅ {len(steps)} step / 4-cam frames 캐시 완료"
-                return gr.update(maximum=n, value=0), status, meta, *cams
 
-            def _trace_step_change(uuid, step_idx):
-                meta = _trace_meta_md(uuid, step_idx)
-                cams = _trace_cameras(uuid, step_idx)
-                return meta, *cams
-
-            def _trace_extract(uuid):
-                if not uuid:
-                    return "_rollout 미선택_"
-                r = _find_rollout(uuid)
-                if r is None:
-                    return f"❌ {uuid} 없음"
-                trace.ensure_frames_extracted(r)
-                return "✅ frames 캐시 갱신됨"
-
-            tr_outs = [tr_step, tr_status, tr_meta, tr_cam_fw, tr_cam_ft, tr_cam_cl, tr_cam_cr]
-            tr_rollout.change(_trace_load, inputs=tr_rollout, outputs=tr_outs)
-            tr_step.change(
-                _trace_step_change,
-                inputs=[tr_rollout, tr_step],
-                outputs=[tr_meta, tr_cam_fw, tr_cam_ft, tr_cam_cl, tr_cam_cr],
-            )
-            tr_refresh.click(
-                lambda: gr.update(choices=rollout_choices()), outputs=tr_rollout
-            )
-            tr_extract.click(_trace_extract, inputs=tr_rollout, outputs=tr_status)
-
-        with gr.Tab("⑦ 🗂 시나리오 카탈로그"):
-            gr.Markdown(
-                f"NVIDIA `{scenarios.HF_REPO}` (HF dataset) 의 시나리오 카탈로그.  \n"
-                "**v0**: 로컬 디스크에 있는지 표시 + 단건 다운로드. wizard에 다른 "
-                "시나리오 주입은 별도 작업 (현재 wizard 기본값 1개 시나리오로 고정)."
-            )
-            cat_summary = gr.Markdown()
-            with gr.Row():
-                with gr.Column(scale=2):
-                    cat_dd = gr.Dropdown(
-                        label="시나리오 (처음 50개)",
-                        choices=_catalog_choices(),
-                        value=None,
+                def _trace_load(uuid, progress=gr.Progress()):
+                    if not uuid:
+                        return (
+                            gr.update(maximum=1, value=0),
+                            "_rollout 선택_",
+                            "_rollout 미선택_",
+                            None, None, None, None,
+                        )
+                    r = _find_rollout(uuid)
+                    if r is None:
+                        return (gr.update(maximum=1, value=0), f"❌ {uuid} 없음", "", None, None, None, None)
+                    # Frame extraction is heavy (minutes for 191 MB asl) — leave it
+                    # to the explicit 📷 button so tab navigation stays responsive.
+                    progress(0.1, desc="rollout.asl 파싱 중...")
+                    steps = trace.parse_steps(r)
+                    progress(0.9, desc="step 정보 준비 중...")
+                    n = max(1, len(steps) - 1)  # slider needs min<max even when empty
+                    # cameras only render if frames are already extracted on disk
+                    cams = _trace_cameras(uuid, 0)
+                    meta = _trace_meta_md(uuid, 0)
+                    cached = sum(1 for c in cams if c)
+                    status = (
+                        f"✅ {len(steps)} step parsed."
+                        f"  카메라 frames: {cached}/4 캐시됨"
+                        + ("  — 📷 frames 추출 / 갱신 버튼으로 4-cam 생성" if cached < 4 else "")
                     )
-                    cat_refresh = gr.Button("↻ 새로고침", size="sm")
-                    cat_dl_btn = gr.Button("⬇ 선택 시나리오 USDZ 다운로드", variant="primary")
-                with gr.Column(scale=1):
-                    cat_detail = gr.Markdown()
-            cat_status = gr.Markdown()
+                    return gr.update(maximum=n, value=0), status, meta, *cams
 
-            def _summary_md():
-                s = scenarios.summary()
-                return (
-                    f"**총 {s['total']}** 시나리오  •  로컬 **{s['local']}**  •  "
-                    f"원격 **{s['remote']}**  •  카탈로그: `{s['csv']}`"
+                def _trace_step_change(uuid, step_idx):
+                    meta = _trace_meta_md(uuid, step_idx)
+                    cams = _trace_cameras(uuid, step_idx)
+                    return meta, *cams
+
+                def _trace_extract(uuid):
+                    if not uuid:
+                        return "_rollout 미선택_"
+                    r = _find_rollout(uuid)
+                    if r is None:
+                        return f"❌ {uuid} 없음"
+                    trace.ensure_frames_extracted(r, force=True)
+                    return "✅ frames 캐시 갱신됨"
+
+                tr_outs = [tr_step, tr_status, tr_meta, tr_cam_fw, tr_cam_ft, tr_cam_cl, tr_cam_cr]
+                tr_rollout.change(_trace_load, inputs=tr_rollout, outputs=tr_outs)
+                tr_step.change(
+                    _trace_step_change,
+                    inputs=[tr_rollout, tr_step],
+                    outputs=[tr_meta, tr_cam_fw, tr_cam_ft, tr_cam_cl, tr_cam_cr],
                 )
-
-            def _detail(scene_id):
-                if not scene_id:
-                    return "_시나리오 선택_"
-                r = scenarios.get(scene_id)
-                if r is None:
-                    return f"❌ {scene_id} 카탈로그에 없음"
-                mark = "✅ 로컬" if r.is_local() else "⬇ 원격"
-                return (
-                    f"**{mark}**  \n"
-                    f"scene_id: `{r.scene_id}`  \n"
-                    f"asset uuid: `{r.uuid}`  \n"
-                    f"nre_version: {r.nre_version}  \n"
-                    f"hf_revision: {r.hf_revision}  \n"
-                    f"path: `{r.path}`"
+                tr_refresh.click(
+                    lambda: gr.update(choices=rollout_choices()), outputs=tr_rollout
                 )
+                tr_extract.click(_trace_extract, inputs=tr_rollout, outputs=tr_status)
 
-            def _download(scene_id, progress=gr.Progress()):
-                if not scene_id:
-                    return "_시나리오 선택_", "_시나리오 선택_"
-                r = scenarios.get(scene_id)
-                if r is None:
-                    return f"❌ {scene_id} 카탈로그에 없음", _summary_md()
-                if r.is_local():
-                    return f"✅ 이미 로컬에 있음 — `{r.local_path.name}`", _summary_md()
-                progress(0.1, desc=f"HF에서 {r.path} 다운로드…")
-                try:
-                    p = scenarios.download(r)
-                except Exception as e:
-                    return f"❌ 다운로드 실패: {e.__class__.__name__}: {e}", _summary_md()
-                progress(1.0, desc="완료")
-                size_mb = p.stat().st_size / 1024 / 1024
-                return (
-                    f"✅ `{p.name}` 받음 ({size_mb:.1f} MB) — sceneset 등록은 별도",
-                    _summary_md(),
-                )
-
-            cat_dd.change(_detail, inputs=cat_dd, outputs=cat_detail)
-            cat_dl_btn.click(_download, inputs=cat_dd, outputs=[cat_status, cat_summary])
-            cat_refresh.click(
-                lambda: (gr.update(choices=_catalog_choices()), _summary_md()),
-                outputs=[cat_dd, cat_summary],
-            )
-            demo.load(_summary_md, outputs=cat_summary)
+            _t6.select(lambda: gr.update(visible=True), outputs=_g6)
 
         gr.Markdown(
             f"_repo: `{REPO_ROOT.name}`  •  daemon 모드: "
             "단발성 (Task #16 upstream 버그 해결 후 활성화 예정)_"
         )
-
     return demo
 
 
 def main():
     host = os.environ.get("KADAP_POC_HOST", "0.0.0.0")
     port = int(os.environ.get("KADAP_POC_PORT", "7870"))
+    share = os.environ.get("KADAP_POC_SHARE", "0") == "1"
     build_ui().launch(
         server_name=host,
         server_port=port,
+        share=share,  # KADAP_POC_SHARE=1 → gradio.live tunnel (works around cloudflared/SSE issues)
         show_error=True,
         theme=gr.themes.Soft(),
         # rollout MP4s live under alpasim/.../rollouts/<scenario>/<uuid>/rollout_asl_frames/,

@@ -1,0 +1,24 @@
+<section class="card">
+  <h2>④ VQA — 시각 질의응답</h2>
+  <p class="muted">
+    Alpamayo 1.5의 VLM 부분 (Cosmos-Reason2 8B) 으로 현재 주행 장면에 대해 자연어 질의응답.
+    묘사형 권장 ("What do you see?", "Describe the road.").
+  </p>
+
+  {% if not cache_ready %}
+  <div class="model-status state-error">
+    ⚠ demo_cache 없음 — <code>scripts/prerender_demo_cache_kadap.sh</code> 실행 후 새로고침.
+  </div>
+  {% else %}
+  <form class="inline">
+    <select name="scen_idx" id="vqa-scen"
+            hx-get="/vqa/preset" hx-target="#vqa-loaded" hx-swap="innerHTML" hx-trigger="change">
+      <option value="">— 시나리오 선택 —</option>
+      {% for s in scenarios %}
+      <option value="{{ s.scen_idx }}">{{ s.label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <div id="vqa-loaded"></div>
+  {% endif %}
+</section>

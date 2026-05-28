@@ -1,0 +1,47 @@
+<section class="card">
+  <h2>Ablation 비교 — Alpamayo 1.5 고정, 같은 scene에 4가지 변형</h2>
+  <p class="muted">
+    "변경된 정보 → 다른 판단" KATECH 시연 핵심.
+    Preset 정의: <code>kadap-poc/ablation.py</code>
+  </p>
+
+  <form id="abl-form">
+    <div>
+      <label>시나리오</label>
+      <select name="scenario" id="abl-scenario">
+        {% for s in scenarios %}
+        <option value="{{ s.id }}">{{ s.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="preset-list">
+      {% for p in presets %}
+      <label class="preset">
+        <input type="checkbox" name="ablation" value="{{ p.name }}"
+               {% if p.name in ['base', 'no_left'] %}checked{% endif %}>
+        {{ p.label }}
+      </label>
+      {% endfor %}
+    </div>
+
+    <div class="row">
+      <button type="button" class="btn"
+              hx-get="/ablation/existing"
+              hx-target="#abl-result"
+              hx-swap="innerHTML"
+              hx-include="#abl-form"
+              hx-vals='js:{"names": [...document.querySelectorAll("input[name=ablation]:checked")].map(x=>x.value).join(",")}'>
+        📁 기존 결과로 비교
+      </button>
+      <button type="button" class="btn btn-primary"
+              hx-post="/ablation/run"
+              hx-target="#abl-result"
+              hx-include="#abl-form">
+        ▶ ablation 순차 실행 (각 ~10-15분)
+      </button>
+    </div>
+  </form>
+
+  <div id="abl-result"></div>
+</section>

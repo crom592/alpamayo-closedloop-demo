@@ -1,0 +1,23 @@
+<section class="card">
+  <h2>⑤ 카메라 입력 개수 평가 — 1 / 2 / 4 cam 비교</h2>
+  <p class="muted">
+    동일 시나리오를 카메라 1/2/4개 구성으로 추론하여 센서 일부 고장 / 비용 절감 / 강건성 평가.
+  </p>
+
+  {% if not cache_ready %}
+  <div class="model-status state-error">
+    ⚠ demo_cache 없음 — <code>scripts/prerender_demo_cache_kadap.sh</code> 실행 후 새로고침.
+  </div>
+  {% else %}
+  <form class="inline">
+    <select name="scen_idx"
+            hx-get="/cam_count/load" hx-target="#cc-loaded" hx-swap="innerHTML" hx-trigger="change">
+      <option value="">— 시나리오 선택 —</option>
+      {% for s in scenarios %}
+      <option value="{{ s.scen_idx }}">{{ s.label }}</option>
+      {% endfor %}
+    </select>
+  </form>
+  <div id="cc-loaded"></div>
+  {% endif %}
+</section>

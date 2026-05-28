@@ -1,0 +1,18 @@
+<div class="model-status state-{{ state.state }}" data-state="{{ state.state }}"
+     {% if state.state == 'loading' %}
+     hx-get="/scenario_eval/model_status" hx-trigger="every 8s" hx-target="this" hx-swap="outerHTML"
+     {% endif %}>
+  {% if state.state == 'idle' %}
+    <span>모델 미적재.</span>
+    <button class="btn" hx-post="/scenario_eval/load_model" hx-target="closest .model-status" hx-swap="outerHTML">
+      🚀 Alpamayo 1.5 적재 (5-7분, 22 GB VRAM)
+    </button>
+  {% elif state.state == 'loading' %}
+    ⏳ <strong>모델 적재 중...</strong> {{ state.msg }}
+  {% elif state.state == 'ready' %}
+    ✅ <strong>모델 준비됨</strong> — 추론 가능
+  {% elif state.state == 'error' %}
+    ❌ <strong>적재 실패:</strong> {{ state.msg }}
+    <button class="btn" hx-post="/scenario_eval/load_model" hx-target="closest .model-status" hx-swap="outerHTML">재시도</button>
+  {% endif %}
+</div>

@@ -1,0 +1,20 @@
+<div class="ablation-status">{{ status }}</div>
+<div class="slot-grid">
+  {% for s in slots %}
+  <div class="slot">
+    <div class="slot-label">{{ s.label }}</div>
+    {% if s.empty %}
+    <div class="muted">미발견{% if s.error %} — {{ s.error }}{% endif %}</div>
+    {% else %}
+    <div class="slot-meta">
+      uuid <code>{{ s.uuid_short }}</code> · {{ "%.1f"|format(s.asl_mb) }} MB
+    </div>
+    {% if s.mp4_url %}
+    <video src="{{ s.mp4_url }}" controls preload="metadata"></video>
+    {% else %}
+    <div class="muted">MP4 캐시 없음</div>
+    {% endif %}
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>

@@ -1,0 +1,43 @@
+<div class="interactive-grid">
+  <div class="interactive-left">
+    <h3>V2X 프리셋</h3>
+    <div class="preset-buttons">
+      <button class="btn"
+              hx-get="/interactive/preset?scen_idx={{ scen_idx }}&key=default"
+              hx-target="#int-bev" hx-swap="innerHTML">✅ 기본 V2X</button>
+      <button class="btn"
+              hx-get="/interactive/preset?scen_idx={{ scen_idx }}&key=baseline"
+              hx-target="#int-bev" hx-swap="innerHTML">🚫 차량 단독</button>
+      <button class="btn"
+              hx-get="/interactive/preset?scen_idx={{ scen_idx }}&key=left_5"
+              hx-target="#int-bev" hx-swap="innerHTML">↰ left 5m</button>
+      <button class="btn"
+              hx-get="/interactive/preset?scen_idx={{ scen_idx }}&key=left_30"
+              hx-target="#int-bev" hx-swap="innerHTML">↰ left 30m</button>
+      <button class="btn"
+              hx-get="/interactive/preset?scen_idx={{ scen_idx }}&key=left_100"
+              hx-target="#int-bev" hx-swap="innerHTML">↰ left 100m</button>
+      <button class="btn"
+              hx-get="/interactive/preset?scen_idx={{ scen_idx }}&key=right_5"
+              hx-target="#int-bev" hx-swap="innerHTML">↱ right 5m</button>
+      <button class="btn"
+              hx-get="/interactive/preset?scen_idx={{ scen_idx }}&key=right_30"
+              hx-target="#int-bev" hx-swap="innerHTML">↱ right 30m</button>
+      <button class="btn"
+              hx-get="/interactive/preset?scen_idx={{ scen_idx }}&key=right_100"
+              hx-target="#int-bev" hx-swap="innerHTML">↱ right 100m</button>
+    </div>
+  </div>
+  <div class="interactive-right">
+    <div class="row" style="gap: 1rem;">
+      <div>
+        <h3>카메라 (자동 루프)</h3>
+        <video src="{{ camera_mp4 }}" autoplay loop muted style="max-width:480px;"></video>
+      </div>
+      <div>
+        <h3>BEV</h3>
+        <div id="int-bev"><img src="{{ bev_default }}" alt="BEV" style="max-width:380px;"></div>
+      </div>
+    </div>
+  </div>
+</div>

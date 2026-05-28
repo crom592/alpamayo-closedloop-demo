@@ -1,0 +1,33 @@
+<section class="card">
+  <h2>메트릭 대시보드</h2>
+  <p class="muted">controller_return 시계열 — 속도 / 횡가속도 / jerk.</p>
+
+  <h3>단일 rollout</h3>
+  <form class="inline">
+    <select name="uuid" hx-get="/metrics/single" hx-target="#metrics-single" hx-swap="innerHTML" hx-trigger="change">
+      <option value="">— rollout 선택 —</option>
+      {% for r in rollouts %}
+      <option value="{{ r.uuid }}">{{ r.uuid_short }}… ({{ r.driver }}/{{ r.ablation }}, {{ "%.1f"|format(r.asl_mb) }} MB)</option>
+      {% endfor %}
+    </select>
+  </form>
+  <div id="metrics-single"></div>
+</section>
+
+<section class="card">
+  <h3>Ablation overlay (2~4개)</h3>
+  <form id="overlay-form" class="inline">
+    {% for r in rollouts[:8] %}
+    <label><input type="checkbox" name="uuid" value="{{ r.uuid }}">
+      {{ r.uuid_short }} ({{ r.ablation }})</label>
+    {% endfor %}
+    <button type="button" class="btn btn-primary"
+            hx-get="/metrics/overlay"
+            hx-target="#metrics-overlay"
+            hx-include="#overlay-form"
+            hx-vals='js:{"uuids": [...document.querySelectorAll("#overlay-form input[name=uuid]:checked")].map(x=>x.value).join(",")}'>
+      📊 overlay 차트
+    </button>
+  </form>
+  <div id="metrics-overlay"></div>
+</section>

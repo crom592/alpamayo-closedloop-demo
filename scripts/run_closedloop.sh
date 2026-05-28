@@ -66,7 +66,14 @@ patch_args=()
 if [[ "${KADAP_DAEMON:-0}" != "1" ]]; then
   patch_args+=(--no-daemon)
 fi
-python3 "$REPO_ROOT/scripts/patch_compose_for_daemon.py" \
+# KADaP PoC: forward V2X natural-language instruction to driver-0.
+# `NAV_TEXT="Turn left in 11m" bash scripts/run_closedloop.sh` end-to-end:
+#   wizard → compose.yaml → patcher → driver-0 env KADAP_NAV_TEXT →
+#   Session.nav_text → PredictionInput.nav_text → helper.create_message.
+if [[ -n "${NAV_TEXT:-}" ]]; then
+  echo "    + V2X nav_text: $NAV_TEXT"
+fi
+KADAP_NAV_TEXT="${NAV_TEXT:-}" python3 "$REPO_ROOT/scripts/patch_compose_for_daemon.py" \
   --run-dir "$(dirname "$compose_file")" "${patch_args[@]}"
 
 echo "==> Bringing up closed-loop stack: $compose_file"

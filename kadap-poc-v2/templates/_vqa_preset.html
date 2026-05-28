@@ -1,0 +1,15 @@
+<div class="row" style="gap: 1rem; align-items: flex-start;">
+  <div>
+    <h3>주행 영상</h3>
+    <video src="{{ camera_mp4 }}" autoplay loop muted style="max-width:420px;"></video>
+  </div>
+  <div style="flex:1;">
+    <h3>사전 Q&A (한국어)</h3>
+    {% for item in qa %}
+    <div class="cot-card">
+      <h4>Q: {{ item.q }}</h4>
+      <p class="cot-text">A: {{ item.a }}</p>
+    </div>
+    {% endfor %}
+  </div>
+</div>

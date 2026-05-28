@@ -98,10 +98,19 @@ def existing_rollouts() -> list[RolloutRef]:
     return out
 
 
-def render_camera_mp4(rollout: RolloutRef, timeout: int = 300) -> Path | None:
-    """Convert rollout.asl → camera mp4 via ``alpasim_utils.asl_to_frames``."""
+def render_camera_mp4(
+    rollout: RolloutRef, timeout: int = 300, force: bool = False
+) -> Path | None:
+    """Convert rollout.asl → camera mp4 via ``alpasim_utils.asl_to_frames``.
+
+    When ``force=False`` (default) and the MP4 cache doesn't exist yet, returns
+    ``None`` without triggering the conversion subprocess — this keeps Gradio
+    page loads from blocking 30s–5min on a fresh 191 MB rollout. Call paths
+    that want to materialise the MP4 (e.g. user clicks "frames 추출") should
+    pass ``force=True``.
+    """
     frames_dir = rollout.dir / "rollout_asl_frames"
-    if not frames_dir.exists() and rollout.asl.exists():
+    if not frames_dir.exists() and rollout.asl.exists() and force:
         subprocess.run(
             [
                 str(VENV_PY),

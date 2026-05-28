@@ -1,0 +1,30 @@
+<table class="step-meta">
+  <thead><tr><th>ablation</th><th>n_steps</th><th>avg_speed</th><th>max_lat</th><th>max_jerk</th></tr></thead>
+  <tbody>
+    {% for s in series %}
+    <tr><td><code>{{ s.uuid_short }}</code> · {{ s.ablation }}</td>
+        <td>{{ s.n_steps }}</td>
+        <td>{{ "%.2f"|format(s.avg_speed) }}</td>
+        <td>{{ "%.3f"|format(s.max_lat) }}</td>
+        <td>{{ "%.2f"|format(s.max_jerk) }}</td></tr>
+    {% endfor %}
+  </tbody>
+</table>
+<div id="metrics-overlay-plot" style="height:400px"></div>
+<script>
+  (function() {
+    var colors = ['#003366', '#d4a017', '#2e7d32', '#c0392b'];
+    var traces = [];
+    var seriesData = {{ series|tojson }};
+    seriesData.forEach(function(s, i) {
+      traces.push({x: s.t, y: s.speed, name: s.ablation + ' speed', line: {color: colors[i % 4]}});
+    });
+    var layout = {
+      margin: {l: 50, r: 10, t: 10, b: 40},
+      xaxis: {title: 'sim time (s)'},
+      yaxis: {title: 'speed (m/s)'},
+      legend: {orientation: 'h', y: -0.18}
+    };
+    if (window.Plotly) Plotly.newPlot('metrics-overlay-plot', traces, layout, {displayModeBar: false, responsive: true});
+  })();
+</script>

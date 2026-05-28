@@ -1,0 +1,37 @@
+<section class="card">
+  <h2>기존 결과 미리보기</h2>
+  <p class="muted">디스크에 누적된 rollout 재생. MP4가 없으면 즉시 변환.</p>
+
+  <form class="inline" hx-get="/scenarios/preview" hx-target="#preview" hx-trigger="change from:select, click from:button">
+    <select name="uuid">
+      <option value="">— rollout 선택 —</option>
+      {% for r in rollouts %}
+      <option value="{{ r.uuid }}">
+        {{ r.uuid_short }}…  ({{ r.scenario_short }}…, {{ r.driver }}/{{ r.ablation }}, {{ "%.1f"|format(r.asl_mb) }} MB)
+      </option>
+      {% endfor %}
+    </select>
+    <button type="button" class="btn">📁 미리보기</button>
+  </form>
+
+  <div id="preview" class="preview-area">
+    <div class="muted">_선택된 rollout 없음_</div>
+  </div>
+</section>
+
+<section class="card">
+  <h2>새 시뮬레이션 실행</h2>
+  <p class="muted">wizard + compose up → driver 추론 → 새 rollout 생성. <strong>~10-15분 소요.</strong></p>
+
+  <form hx-post="/scenarios/run" hx-target="#run-progress" hx-swap="innerHTML">
+    <label>
+      Driver:
+      <select name="driver">
+        <option value="alpamayo1_5" selected>Alpamayo 1.5 (10B)</option>
+      </select>
+    </label>
+    <button type="submit" class="btn btn-primary">▶ 실행</button>
+  </form>
+
+  <div id="run-progress"></div>
+</section>

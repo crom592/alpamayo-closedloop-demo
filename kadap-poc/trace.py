@@ -43,11 +43,22 @@ class StepInfo:
     ego_speed: float  # m/s, hypot(vx, vy) from controller dynamic_state
 
 
-def ensure_frames_extracted(rollout: RolloutRef, timeout: int = 600) -> Path:
-    """Materialise JPEG frames under ``<rollout>/rollout_asl_frames_jpeg/``."""
+def ensure_frames_extracted(
+    rollout: RolloutRef, timeout: int = 600, force: bool = False
+) -> Path:
+    """Materialise JPEG frames under ``<rollout>/rollout_asl_frames_jpeg/``.
+
+    Returns the target dir. When ``force=False`` and frames aren't cached, the
+    function returns the dir path without invoking the multi-minute
+    ``asl_to_frames`` subprocess — callers that only want to read cached
+    frames (e.g. Gradio's per-step camera display) pass ``force=False`` to
+    avoid blocking the UI. Pass ``force=True`` from explicit user actions
+    (📷 frames 추출 / 갱신 button)."""
     target = rollout.dir / FRAMES_DIRNAME
     if target.exists() and any(target.rglob("*.jpg")):
         return target
+    if not force:
+        return target  # cache-only: caller will see empty / non-existent dir
     tmp_root = rollout.dir / "_frames_tmp"
     tmp_root.mkdir(exist_ok=True)
     subprocess.run(

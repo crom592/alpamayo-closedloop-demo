@@ -1,0 +1,26 @@
+<section class="card">
+  <h2>closed-loop trace — NRE → driver → controller step-by-step</h2>
+  <p class="muted">
+    rollout 선택 → step slider로 이동.
+    매 cycle Alpamayo 1.5가 본 카메라 frame + 예측 trajectory + controller가 propagate한 ego pose를 검증.
+  </p>
+
+  <form class="inline">
+    <select name="uuid" id="trace-uuid"
+            hx-get="/trace/load" hx-target="#trace-loaded" hx-swap="innerHTML" hx-trigger="change">
+      <option value="">— rollout 선택 —</option>
+      {% for r in rollouts %}
+      <option value="{{ r.uuid }}">{{ r.uuid_short }}… ({{ r.driver }}/{{ r.ablation }}, {{ "%.1f"|format(r.asl_mb) }} MB)</option>
+      {% endfor %}
+    </select>
+    <button type="button" class="btn"
+            hx-post="/trace/extract"
+            hx-include="#trace-uuid"
+            hx-vals='js:{"uuid": document.getElementById("trace-uuid").value}'
+            hx-target="#trace-extract-status">
+      📷 frames 추출 / 갱신 (분 단위 소요)
+    </button>
+  </form>
+  <div id="trace-extract-status"></div>
+  <div id="trace-loaded"></div>
+</section>

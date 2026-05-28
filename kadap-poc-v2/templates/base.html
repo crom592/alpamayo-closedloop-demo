@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>KATECH V2X 자율주행 평가환경 PoC</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/app.css">
+<script src="https://unpkg.com/htmx.org@1.9.12"></script>
+<script src="https://cdn.plot.ly/plotly-2.35.2.min.js"></script>
+</head>
+<body>
+<header>
+  <h1>KATECH V2X 자율주행 평가환경 PoC</h1>
+  <p class="muted">한국자동차연구원 — NVIDIA Alpamayo 1.5 (10B VLA) · 다양한 한국형 조건 하 V2X 정보가 모델 의사결정에 미치는 영향 정량 평가</p>
+</header>
+
+<nav class="tabs">
+  {% set tabs = [
+    ('scenario_eval', '① 시나리오 단건 평가'),
+    ('demo_run',      '② 시연 자동 실행'),
+    ('interactive',   '③ 실시간 인터랙티브'),
+    ('vqa',           '④ VQA'),
+    ('cam_count',     '⑤ 카메라 입력 개수'),
+    ('closedloop',    '⑥ NRE 클로즈드루프'),
+    ('system',        'ⓘ 시스템'),
+  ] %}
+  {% for slug, label in tabs %}
+  <a href="#" class="tab{% if active_tab == slug %} active{% endif %}"
+     hx-get="/tab/{{ slug }}" hx-target="#content" hx-swap="innerHTML"
+     hx-on::after-request="document.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); this.classList.add('active')">
+    {{ label }}
+  </a>
+  {% endfor %}
+</nav>
+
+<main id="content" hx-get="/tab/scenario_eval" hx-trigger="load" hx-swap="innerHTML">
+  <div class="muted">로딩 중…</div>
+</main>
+
+<footer class="muted">
+  v2 (FastAPI + HTMX + Plotly). 원본 ARM POC 흐름 + KADaP NRE 클로즈드루프 통합. KATECH 사업제안 PoC.
+</footer>
+</body>
+</html>

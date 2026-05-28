@@ -1,0 +1,18 @@
+<section class="card">
+  <h2>② 시연 자동 실행 — 4 시나리오 × 3조건 mp4</h2>
+  <p class="muted">
+    큐레이션된 4개 시나리오(11m 좌회전 헤드라이너 + 3개)에 대해 시간 진행 모드로 t0를 0.3초씩 전진하며
+    매 프레임 3조건 추론 후 60 fps 컴포지트 영상(카메라+BEV+CoT) 생성.
+  </p>
+
+  {% if cache_ready %}
+  <div class="muted">demo_cache 준비됨. 사전 렌더된 mp4 재생:</div>
+  {# TODO: list ui_outputs/*.mp4 #}
+  <p class="muted">자동 렌더 결과는 prerender 직후 <code>notebooks/ui_outputs/</code> 에 저장됨.</p>
+  {% else %}
+  <div class="model-status state-error">
+    ⚠ demo_cache 없음 — 사전 렌더 필요.
+    <code>scripts/prerender_demo_cache_kadap.sh</code> 실행 (~15분).
+  </div>
+  {% endif %}
+</section>

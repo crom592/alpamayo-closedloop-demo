@@ -1,6 +1,6 @@
 """Ablation specifications for the KADaP PoC closed-loop demo.
 
-The PoC story for the Korean Automotive Research Institute (KATRI) is
+The PoC story for the Korea Automotive Technology Institute (KATECH) is
 "changed input → changed judgment" — showing that the Alpamayo 1.5 driver
 genuinely reacts to perturbations rather than replaying the ground truth.
 

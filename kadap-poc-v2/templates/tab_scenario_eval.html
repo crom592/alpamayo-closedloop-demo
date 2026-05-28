@@ -1,0 +1,69 @@
+<section class="card">
+  <h2>① 시나리오 단건 평가 — V2X 3조건 정밀 비교</h2>
+  <p class="muted">
+    동일 시나리오를 <strong>(a) V2X 연계 / (b) 차량 단독 / (c) 반사실 (방향 swap)</strong> 3 조건으로 동시 추론.
+    ADE/FDE/측방편차/Heading error 정량 비교 + Chain-of-Causation 자연어 추론 출력.
+  </p>
+
+  <div id="se-model-status">{% include '_model_status.html' %}</div>
+
+  <form id="se-form" hx-post="/scenario_eval/run" hx-target="#se-result" hx-swap="innerHTML" hx-indicator="#se-spinner">
+    <div class="form-row">
+      <label>시나리오</label>
+      <select name="scenario_idx" id="se-scenario">
+        {% for s in samples %}
+        <option value="{{ s.idx }}" data-default-v2x="{{ s.nav_text }}">{{ s.label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="form-row">
+      <label>V2X 메시지 (자연어)</label>
+      <input type="text" name="v2x_text" id="se-v2x" placeholder="비우면 시나리오 기본값" style="width:360px;">
+      <span class="muted" id="se-v2x-hint"></span>
+    </div>
+    <div class="form-row">
+      <label>비교 조건</label>
+      <label><input type="checkbox" name="do_baseline" checked> 차량 단독 baseline</label>
+      <label><input type="checkbox" name="do_counterfactual" checked> 반사실 검증 (direction swap)</label>
+    </div>
+    <div class="form-row">
+      <button type="submit" class="btn btn-primary">▶ 3-조건 open-loop 추론</button>
+      <span id="se-spinner" class="htmx-indicator">⏳ 추론 중...</span>
+    </div>
+  </form>
+
+  <div id="se-result"></div>
+
+  <hr style="margin: 2rem 0;">
+
+  <h3>▶ NRE 클로즈드루프 검증 (선택)</h3>
+  <p class="muted">
+    위 V2X 메시지를 Alpasim+NRE에 주입해서 실제 폐루프 시뮬 (~10-15분).
+    driver-0가 매 cycle Alpamayo 추론 결과로 ego 운전, NRE가 카메라 렌더링.
+  </p>
+  <form hx-post="/closedloop/run" hx-target="#nre-progress" hx-swap="innerHTML">
+    <input type="hidden" name="v2x_text" id="nre-v2x-mirror">
+    <input type="hidden" name="scene_id" id="nre-scene-mirror">
+    <button type="button" class="btn btn-primary"
+            onclick="
+              document.getElementById('nre-v2x-mirror').value = document.getElementById('se-v2x').value;
+              this.form.requestSubmit();
+            ">
+      ▶ NRE 클로즈드루프 실행 (~10-15분)
+    </button>
+  </form>
+  <div id="nre-progress"></div>
+</section>
+
+<script>
+  (function() {
+    var sel = document.getElementById('se-scenario');
+    var hint = document.getElementById('se-v2x-hint');
+    function update() {
+      var opt = sel.options[sel.selectedIndex];
+      hint.textContent = '기본값: ' + (opt.dataset.defaultV2x || '');
+    }
+    sel.addEventListener('change', update);
+    update();
+  })();
+</script>

@@ -1,0 +1,33 @@
+<div class="job-card"
+     {% if job.state == 'running' %}
+     hx-get="/ablation/run/{{ job_id }}"
+     hx-trigger="every 4s"
+     hx-target="this"
+     hx-swap="outerHTML"
+     {% endif %}>
+  <div class="job-header">
+    <span class="state state-{{ job.state }}">
+      {% if job.state == 'running' %}⏳{% elif job.state == 'done' %}✅{% else %}❌{% endif %}
+      ablation: {{ job.state }}
+    </span>
+    <span class="muted">{{ job.names|join(', ') }}</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" style="width: {{ (job.pct * 100)|round(0) }}%"></div></div>
+  <div class="job-msg">{{ "%.0f%%"|format(job.pct * 100) }} — {{ job.msg }}</div>
+
+  {% if job.slots %}
+  <div class="slot-grid">
+    {% for s in job.slots %}
+    <div class="slot">
+      <div class="slot-label">{{ s.label }}</div>
+      {% if s.empty %}
+      <div class="muted">{{ s.error or '진행 중...' }}</div>
+      {% else %}
+      <div class="slot-meta">uuid <code>{{ s.uuid_short }}</code> · {{ "%.1f"|format(s.asl_mb) }} MB</div>
+      {% if s.mp4_url %}<video src="{{ s.mp4_url }}" controls preload="metadata"></video>{% endif %}
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>

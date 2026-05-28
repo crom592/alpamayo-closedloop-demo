@@ -1,0 +1,42 @@
+<div class="muted">
+  ✅ {{ n_steps }} step / {{ rollout.driver }} / V2X="{{ rollout.v2x_text or '(none)' }}"
+  · frames 캐시: {% if frames_cached %}있음{% else %}없음 (📷 버튼){% endif %}
+</div>
+
+{% if m_summary %}
+<table class="step-meta vqa-metrics" style="max-width:560px;">
+  <tr><th>n_steps</th><td>{{ m_summary.n_steps }}</td><th>시뮬 시간</th><td>{{ "%.2f"|format(m_summary.duration_s) }} s</td></tr>
+  <tr><th>avg speed</th><td>{{ "%.2f"|format(m_summary.avg_speed) }} m/s</td><th>max speed</th><td>{{ "%.2f"|format(m_summary.max_speed) }} m/s</td></tr>
+  <tr><th>max lat acc</th><td>{{ "%.3f"|format(m_summary.max_lat) }} m/s²</td><th>max jerk</th><td>{{ "%.2f"|format(m_summary.max_jerk) }} m/s³</td></tr>
+</table>
+<div id="cl-metrics-plot" style="height:340px"></div>
+<script>
+  (function() {
+    var t = {{ t|tojson }};
+    var traces = [
+      {x: t, y: {{ speed|tojson }}, name: 'speed (m/s)', line: {color: '#003366'}},
+      {x: t, y: {{ lat|tojson }}, name: '|lat acc| (m/s²)', yaxis: 'y2', line: {color: '#d4a017'}},
+      {x: t, y: {{ jerk|tojson }}, name: 'jerk (m/s³)', yaxis: 'y3', line: {color: '#c0392b'}}
+    ];
+    var layout = {
+      margin: {l: 50, r: 50, t: 10, b: 40},
+      xaxis: {title: 'sim time (s)', domain: [0.08, 0.95]},
+      yaxis: {title: 'speed'},
+      yaxis2: {title: 'lat', overlaying: 'y', side: 'right', position: 0.9},
+      yaxis3: {title: 'jerk', overlaying: 'y', side: 'right', position: 0.97, anchor: 'free'},
+      legend: {orientation: 'h', y: -0.2}
+    };
+    if (window.Plotly) Plotly.newPlot('cl-metrics-plot', traces, layout, {displayModeBar: false, responsive: true});
+  })();
+</script>
+{% endif %}
+
+<h3 style="margin-top:1.5rem;">Step-by-step trace</h3>
+<input type="range" id="cl-step" min="0" max="{{ max_step }}" value="0" step="1"
+       hx-get="/closedloop/step"
+       hx-target="#cl-step-view" hx-swap="innerHTML"
+       hx-vals='js:{"uuid": "{{ uuid }}", "step": this.value}'
+       hx-trigger="input changed delay:120ms">
+<div id="cl-step-view"
+     hx-get="/closedloop/step?uuid={{ uuid }}&step=0"
+     hx-trigger="load" hx-swap="innerHTML"></div>

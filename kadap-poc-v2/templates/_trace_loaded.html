@@ -1,0 +1,26 @@
+<div class="trace-controls">
+  <div class="muted">
+    ✅ {{ n_steps }} step parsed.
+    {% if frames_cached %}카메라 frames: 캐시됨{% else %}카메라 frames: 없음 (📷 버튼 클릭){% endif %}
+  </div>
+  <input type="range" name="step" min="0" max="{{ max_step }}" value="0" step="1"
+         id="trace-step-slider"
+         hx-get="/trace/step"
+         hx-target="#trace-step-view"
+         hx-trigger="input changed delay:120ms"
+         hx-include="#trace-uuid"
+         hx-vals='js:{"uuid": document.getElementById("trace-uuid").value, "step": this.value}'>
+  <div class="muted" id="trace-step-label">step: 0</div>
+</div>
+
+<div id="trace-step-view"
+     hx-get="/trace/step?uuid={{ uuid }}&step=0"
+     hx-trigger="load"
+     hx-swap="innerHTML"></div>
+
+<script>
+  // Update step label as the user drags
+  document.getElementById('trace-step-slider').addEventListener('input', (e) => {
+    document.getElementById('trace-step-label').textContent = 'step: ' + e.target.value;
+  });
+</script>

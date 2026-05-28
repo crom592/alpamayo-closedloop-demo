@@ -1,0 +1,28 @@
+<div class="job-card"
+     {% if job.state == 'running' %}
+     hx-get="/scenarios/run/{{ job_id }}"
+     hx-trigger="every 3s"
+     hx-target="this"
+     hx-swap="outerHTML"
+     {% endif %}>
+  <div class="job-header">
+    <span class="state state-{{ job.state }}">
+      {% if job.state == 'running' %}⏳{% elif job.state == 'done' %}✅{% else %}❌{% endif %}
+      {{ job.state }}
+    </span>
+    <span class="muted">job {{ job_id }} · driver={{ job.driver }}</span>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" style="width: {{ (job.pct * 100)|round(0) }}%"></div>
+  </div>
+  <div class="job-msg">{{ "%.0f%%"|format(job.pct * 100) }} — {{ job.msg }}</div>
+
+  {% if job.state == 'done' %}
+  <div class="job-result">
+    완료된 rollout uuid: <code>{{ job.rollout_uuid }}</code>
+    <button class="btn" hx-get="/scenarios/preview?uuid={{ job.rollout_uuid }}"
+            hx-target="#preview" hx-swap="innerHTML">📁 보기</button>
+  </div>
+  {% endif %}
+</div>
