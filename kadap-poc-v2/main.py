@@ -369,12 +369,13 @@ async def vqa_preset(request: Request, scen_idx: int):
     if not vqa_path.exists():
         return HTMLResponse("<div class='error'>vqa.json 없음</div>")
     data = json.loads(vqa_path.read_text())
+    qa = data if isinstance(data, list) else data.get("qa", [])
     return TEMPLATES.TemplateResponse(
         request,
         "_vqa_preset.html",
         {
             "scen_idx": scen_idx,
-            "qa": data.get("qa", []),
+            "qa": qa,
             "camera_mp4": f"/demo_cache/scen_{scen_idx:02d}/camera.mp4",
         },
     )
@@ -410,12 +411,13 @@ async def cam_count_load(request: Request, scen_idx: int):
     if not meta_path.exists():
         return HTMLResponse("<div class='error'>cam_meta.json 없음</div>")
     data = json.loads(meta_path.read_text())
+    rows = data if isinstance(data, list) else data.get("configs", [])
     return TEMPLATES.TemplateResponse(
         request,
         "_cam_count_load.html",
         {
             "scen_idx": scen_idx,
-            "rows": data.get("configs", []),
+            "rows": rows,
             "cache_dir": f"/demo_cache/scen_{scen_idx:02d}",
         },
     )

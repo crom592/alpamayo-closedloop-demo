@@ -1,14 +1,15 @@
 <div class="row" style="gap: 0.5rem; align-items: flex-start;">
   {% for r in rows %}
   <div style="flex:1;">
-    <h4>{{ r.key|default('?') }} cam</h4>
-    <img src="{{ cache_dir }}/cam_{{ r.key }}cam.png" alt="{{ r.key }} cam" style="max-width:100%;">
+    <h4>{{ r.label or (r.key + ' cam') }}</h4>
+    <img src="{{ cache_dir }}/cam_{{ r.key }}.png" alt="{{ r.key }}" style="max-width:100%;">
     <table class="step-meta">
-      <tr><th>ADE</th><td>{{ "%.2f"|format(r.metrics.ADE) }}</td></tr>
-      <tr><th>FDE</th><td>{{ "%.2f"|format(r.metrics.FDE) }}</td></tr>
-      <tr><th>lat dev</th><td>{{ "%.2f"|format(r.metrics.get('max_lat_dev', 0)) }}</td></tr>
+      <tr><th>ADE (m)</th><td>{{ "%.2f"|format(r.metrics['ADE (m)']) }}</td></tr>
+      <tr><th>FDE (m)</th><td>{{ "%.2f"|format(r.metrics['FDE (m)']) }}</td></tr>
+      <tr><th>Max lat dev</th><td>{{ "%.2f"|format(r.metrics['Max lateral dev (m)']) }}</td></tr>
+      <tr><th>Heading err</th><td>{{ "%.1f"|format(r.metrics['Heading err (°)']) }}°</td></tr>
     </table>
-    <div class="muted" style="font-size:0.8rem;">{{ r.cot|truncate(120) }}</div>
+    <div class="muted" style="font-size:0.8rem;">{{ r.cot|truncate(150) }}</div>
   </div>
   {% endfor %}
 </div>
