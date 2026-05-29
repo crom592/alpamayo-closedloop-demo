@@ -26,20 +26,25 @@
   <p class="muted">
     위에서 시나리오를 먼저 선택하면 같은 장면에 자유 질문을 던질 수 있습니다.
     1회 추론 약 30~40초. Alpamayo VQA는 dual-mode 모델이라 질문 유형에 따라
-    응답 형식이 달라집니다:
+    응답 형식이 달라집니다 (모델 자체 동작, 강제 불가).
   </p>
   <ul class="muted" style="font-size:0.85rem; margin: 0.25rem 0 0.75rem 1.5rem;">
-    <li><strong>도메인이 좁고 구체적인 묘사 질문 → 자연어 응답</strong>
+    <li><strong>날씨/조명/도로 속성 질문 → 자연어 응답 (3/3 검증됨)</strong>
       <ul>
         <li><code>Describe the road and weather.</code></li>
-        <li><code>Describe the lighting and traffic.</code></li>
-        <li><code>Describe what is happening at this intersection.</code></li>
+        <li><code>Describe the weather conditions.</code></li>
+        <li><code>Describe the road surface and weather.</code></li>
+        <li><code>Describe the time of day and weather.</code></li>
+        <li><code>Describe the road type and lane configuration.</code></li>
+        <li><code>What is the weather like?</code>, <code>Is it sunny or cloudy?</code></li>
       </ul>
     </li>
-    <li><strong>일반/객체/위치 질문 → bbox 좌표 (객체 감지 모드)</strong>
+    <li><strong>장면/객체/사건 질문 → bbox 좌표 (객체 감지 모드)</strong>
       <ul>
-        <li><code>Describe the scene.</code>, <code>What do you see?</code>, <code>Are there any vehicles?</code>
-        — 모두 객체 감지로 빠짐 (모델 자체의 동작)</li>
+        <li><code>Describe the scene.</code>, <code>What do you see?</code>,
+            <code>Are there any vehicles?</code>,
+            <code>Describe what is happening at this intersection.</code>,
+            <code>Describe the lighting and traffic.</code></li>
       </ul>
     </li>
   </ul>
