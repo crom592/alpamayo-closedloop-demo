@@ -20,6 +20,24 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+
+# Korean glyph support for BEV legends/banners.
+# Mirror make_video_nav.py:19-29 (the open-loop video pipeline already has it).
+from matplotlib import font_manager as _fm
+for _f in (
+    "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+    "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+):
+    try:
+        _fm.fontManager.addfont(_f)
+    except Exception:
+        pass
+# NotoSansCJK-Regular.ttc is a TrueType Collection; matplotlib only reads the
+# first face inside it, which registers under the JP name. The CJK Sans font
+# covers Hangul/Kana/Hanzi alike, so the "JP" label still renders Korean.
+plt.rcParams["font.family"] = ["Noto Sans CJK JP", "NanumGothic", "DejaVu Sans"]
+plt.rcParams["axes.unicode_minus"] = False
+
 import numpy as np
 import torch
 
