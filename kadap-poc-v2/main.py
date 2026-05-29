@@ -51,7 +51,7 @@ import vlm_qa  # noqa: E402
 HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
 
-app = FastAPI(title="KATECH V2X PoC v2")
+app = FastAPI(title="한국형 V2X 자율주행 평가 플랫폼")
 app.mount("/static", StaticFiles(directory=str(HERE / "static")), name="static")
 app.mount("/artifacts", StaticFiles(directory=str(ROLLOUTS_DIR)), name="artifacts")
 if DEMO_CACHE_DIR.exists():
@@ -585,6 +585,13 @@ async def system_refresh(request: Request):
             return f"<<error: {e}>>"
 
     services = ["controller-0", "driver-0", "physics-0", "sensorsim-0", "runtime-0"]
+    service_labels = {
+        "controller-0": "차량 컨트롤러",
+        "driver-0": "자율주행 모델 (Alpamayo)",
+        "physics-0": "물리 시뮬레이터",
+        "sensorsim-0": "센서 시뮬레이터",
+        "runtime-0": "시뮬레이션 런타임",
+    }
     docker_ps = sh(["docker", "ps", "-a", "--format", "{{.Names}}\t{{.Status}}"])
     svc_status = {s: "—" for s in services}
     for line in docker_ps.splitlines():
@@ -595,6 +602,9 @@ async def system_refresh(request: Request):
             if s in name:
                 svc_status[s] = status
                 break
+    rows = [
+        {"label": service_labels[s], "status": svc_status[s]} for s in services
+    ]
     gpu = sh(
         [
             "nvidia-smi",
@@ -604,7 +614,7 @@ async def system_refresh(request: Request):
         timeout=5,
     )
     return TEMPLATES.TemplateResponse(
-        request, "_system_refresh.html", {"services": svc_status, "gpu": gpu}
+        request, "_system_refresh.html", {"rows": rows, "gpu": gpu}
     )
 
 

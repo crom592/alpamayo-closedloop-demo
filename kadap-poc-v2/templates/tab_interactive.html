@@ -1,13 +1,13 @@
 <section class="card">
   <h2>③ 실시간 인터랙티브 시연 — V2X 프리셋 즉시 전환</h2>
   <p class="muted">
-    사전 캐시된 카메라 영상이 자동 재생되는 동안 V2X 프리셋 버튼 클릭 → BEV가 0초 지연으로 즉시 전환.
-    <strong>KATECH 시연 메인.</strong>
+    사전 캐시된 카메라 영상이 자동 재생되는 동안 V2X 프리셋 버튼 클릭 → BEV(조감도)가 지연 없이 즉시 전환.
+    동일 장면에 대해 V2X 입력만 바뀔 때 자율주행 모델의 의사결정이 어떻게 달라지는지 직관적으로 확인.
   </p>
 
   {% if not cache_ready %}
   <div class="model-status state-error">
-    ⚠ demo_cache 없음 — <code>scripts/prerender_demo_cache_kadap.sh</code> 실행 후 새로고침.
+    ⚠ 사전 렌더 캐시가 없습니다. 시스템 관리자에게 문의해 주세요.
   </div>
   {% else %}
   <form class="inline">

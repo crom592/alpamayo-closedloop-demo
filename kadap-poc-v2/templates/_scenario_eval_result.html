@@ -1,10 +1,10 @@
 <div class="result-grid">
   <div class="result-bev">
-    <h3>BEV — GT 대비 3-조건 예측 궤적</h3>
+    <h3>BEV(조감도) — 정답 궤적 대비 3조건 예측 비교</h3>
     <img src="/scenario_eval/img/{{ token }}/bev" alt="BEV" style="max-width:100%;">
   </div>
   <div class="result-cam">
-    <h3>front_wide_120fov 입력</h3>
+    <h3>전방 광각 카메라 입력 (120° FoV)</h3>
     <img src="/scenario_eval/img/{{ token }}/cam" alt="camera" style="max-width:100%;">
   </div>
 </div>
@@ -20,7 +20,7 @@
 
 <table class="step-meta vqa-metrics">
   <thead>
-    <tr><th>조건</th><th>ADE (m)</th><th>FDE (m)</th><th>max lat dev (m)</th><th>heading err (°)</th></tr>
+    <tr><th>조건</th><th>ADE 평균 거리오차 (m)</th><th>FDE 최종 거리오차 (m)</th><th>최대 측방 편차 (m)</th><th>방위 오차 (°)</th></tr>
   </thead>
   <tbody>
     {% for row in result.rows %}

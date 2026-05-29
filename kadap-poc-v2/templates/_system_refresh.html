@@ -1,8 +1,8 @@
 <table class="step-meta">
-  <thead><tr><th>서비스</th><th>상태</th></tr></thead>
+  <thead><tr><th>구성 요소</th><th>상태</th></tr></thead>
   <tbody>
-    {% for svc, status in services.items() %}
-    <tr><td><code>{{ svc }}</code></td><td>{{ status }}</td></tr>
+    {% for row in rows %}
+    <tr><td>{{ row.label }}</td><td>{{ row.status }}</td></tr>
     {% endfor %}
   </tbody>
 </table>
