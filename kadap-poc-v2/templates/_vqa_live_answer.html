@@ -1,0 +1,9 @@
+<div class="cot-card">
+  <h4>Q: {{ question }}</h4>
+  <p class="cot-text">A: {{ answer or '(빈 응답)' }}</p>
+  {% if not answer %}
+  <p class="muted" style="margin-top:0.4rem; font-size:0.8rem;">
+    Alpamayo VQA는 묘사형 질문에 강합니다. 예: "What do you see ahead?", "Describe the road.", "Are there any pedestrians?"
+  </p>
+  {% endif %}
+</div>

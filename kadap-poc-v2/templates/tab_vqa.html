@@ -20,5 +20,25 @@
     </select>
   </form>
   <div id="vqa-loaded"></div>
+
+  <hr style="margin: 1.5rem 0;">
+  <h3>▶ 라이브 VQA — 직접 질문 입력</h3>
+  <p class="muted">
+    위에서 시나리오를 먼저 선택하면 같은 장면에 자유 질문을 던질 수 있습니다.
+    Alpamayo VQA는 두 종류 응답을 반환합니다:
+    <strong>묘사형 질문</strong>("Describe the road.", "Describe the weather.") → 자연어,
+    <strong>객체/위치 질문</strong>("What do you see ahead?", "Are there any vehicles?") → bbox 좌표.
+    1회 추론 약 30~40초.
+  </p>
+  <form hx-post="/vqa/live" hx-target="#vqa-live-result" hx-swap="innerHTML"
+        hx-indicator="#vqa-live-spinner" hx-include="#vqa-scen">
+    <div class="form-row">
+      <input type="text" name="question" placeholder="Describe the road and weather."
+             style="width:420px;" required>
+      <button type="submit" class="btn btn-primary">▶ 질문</button>
+      <span id="vqa-live-spinner" class="htmx-indicator">⏳ 추론 중 (약 30초)...</span>
+    </div>
+  </form>
+  <div id="vqa-live-result"></div>
   {% endif %}
 </section>

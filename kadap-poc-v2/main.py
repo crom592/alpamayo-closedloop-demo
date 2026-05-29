@@ -384,6 +384,35 @@ async def tab_vqa(request: Request):
     )
 
 
+@app.post("/vqa/live", response_class=HTMLResponse)
+async def vqa_live(request: Request):
+    form = await request.form()
+    try:
+        scen_idx = int(form.get("scen_idx", "-1"))
+    except ValueError:
+        return HTMLResponse("<div class='error'>잘못된 시나리오 인덱스</div>")
+    question = str(form.get("question", "")).strip()
+    if not question:
+        return HTMLResponse("<div class='error'>질문을 입력해 주세요.</div>")
+    if vlm_qa.model_status().get("state") != "ready":
+        return HTMLResponse(
+            "<div class='error'>모델이 아직 적재되지 않았습니다. ① 탭에서 먼저 모델을 적재해 주세요.</div>"
+        )
+
+    def _run() -> str:
+        return vlm_qa.run_live_vqa(scen_idx, question)
+
+    try:
+        answer = await asyncio.get_event_loop().run_in_executor(PARSE_EXECUTOR, _run)
+    except Exception as e:  # noqa: BLE001
+        return HTMLResponse(f"<div class='error'>추론 실패: {e.__class__.__name__}: {e}</div>")
+    return TEMPLATES.TemplateResponse(
+        request,
+        "_vqa_live_answer.html",
+        {"question": question, "answer": answer},
+    )
+
+
 @app.get("/vqa/preset", response_class=HTMLResponse)
 async def vqa_preset(request: Request, scen_idx: int):
     if not DEMO_CACHE_DIR.exists():

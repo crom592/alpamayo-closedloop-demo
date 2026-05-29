@@ -169,6 +169,77 @@ def run_one_condition(data, nav_text: str | None) -> tuple[np.ndarray, str]:
     return pred_xy, cot
 
 
+def run_live_vqa(scenario_idx: int, question_en: str) -> str:
+    """Live VQA answer for a free-form question against a scenario's frames.
+
+    Uses helper.create_vqa_message + model.generate_text. Loads the data
+    fresh each call (lightweight). Returns the model's answer string.
+    """
+    samples = load_samples()
+    if not (0 <= scenario_idx < len(samples)):
+        raise ValueError(f"scenario_idx {scenario_idx} out of range")
+    s = samples[scenario_idx]
+    question = (question_en or "").strip()
+    if not question:
+        raise ValueError("question must be non-empty")
+
+    data = load_physical_aiavdataset(s["clip_id"], t0_us=s["t0_relative"])
+    model, processor = ensure_model()
+    messages = helper.create_vqa_message(
+        data["image_frames"].flatten(0, 1),
+        question=question,
+        camera_indices=data["camera_indices"],
+    )
+    inputs = processor.apply_chat_template(
+        messages,
+        tokenize=True,
+        add_generation_prompt=False,
+        continue_final_message=True,
+        return_dict=True,
+        return_tensors="pt",
+    )
+    model_inputs = helper.to_device({"tokenized_data": inputs}, "cuda")
+    import random as _r
+    torch.cuda.manual_seed_all(_r.randint(0, 2**31 - 1))
+    with torch.autocast("cuda", dtype=torch.bfloat16):
+        extra = model.generate_text(
+            data=model_inputs,
+            top_p=0.98,
+            temperature=0.6,
+            num_samples=1,
+            max_generation_length=96,
+        )
+    raw = extra["answer"][0]
+    # Alpamayo wraps every answer in a list, e.g. ['some text'] or
+    # ['[0.306, 0.491, 0.325, 0.524]'] (the bbox is itself a string).
+    # Unwrap until we have a plain string.
+    while isinstance(raw, (list, tuple)) and len(raw) == 1:
+        raw = raw[0]
+    if not isinstance(raw, str):
+        try:
+            raw = " ".join(str(x) for x in raw)
+        except TypeError:
+            raw = str(raw)
+    text = raw.strip()
+
+    # Detect grounding output: "[x1, y1, x2, y2]" of 4 normalized floats.
+    import re as _re
+    m = _re.fullmatch(r"\[\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\]", text)
+    if m:
+        try:
+            nums = [float(g) for g in m.groups()]
+            if all(0.0 <= n <= 1.0 for n in nums):
+                x1, y1, x2, y2 = nums
+                return (
+                    f"[객체 감지] 정규화 bbox=({x1:.3f}, {y1:.3f}) → ({x2:.3f}, {y2:.3f}). "
+                    "묘사형 질문(\"Describe the road.\", \"Describe the weather.\")을 쓰면 "
+                    "자연어 응답이 나옵니다."
+                )
+        except ValueError:
+            pass
+    return text
+
+
 def compute_metrics(pred_xy: np.ndarray, gt_xy: np.ndarray) -> dict:
     T = min(pred_xy.shape[1], gt_xy.shape[1])
     p = pred_xy[:, :T]
