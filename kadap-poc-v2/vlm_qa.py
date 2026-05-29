@@ -91,7 +91,7 @@ def ensure_model() -> tuple[object, object]:
             model = Alpamayo1_5.from_pretrained(
                 "nvidia/Alpamayo-1.5-10B",
                 dtype=torch.bfloat16,
-                attn_implementation="sdpa",  # same workaround as the driver patch
+                attn_implementation="eager",
             ).to("cuda")
             processor = helper.get_processor(model.tokenizer)
             _MODEL = model
