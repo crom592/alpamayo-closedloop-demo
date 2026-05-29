@@ -372,11 +372,23 @@ async def tab_vqa(request: Request):
     cache_ready = DEMO_CACHE_DIR.exists()
     cache_scenarios: list[dict] = []
     if cache_ready:
+        try:
+            samples = vlm_qa.load_samples()
+        except Exception:
+            samples = []
+        sample_by_idx = {i: s for i, s in enumerate(samples)}
         for scen_dir in sorted(DEMO_CACHE_DIR.glob("scen_*")):
-            vqa_path = scen_dir / "vqa.json"
-            if vqa_path.exists():
-                idx = int(scen_dir.name.split("_")[1])
-                cache_scenarios.append({"scen_idx": idx, "label": f"scen_{idx:02d}"})
+            cam_path = scen_dir / "camera.mp4"
+            if not cam_path.exists():
+                continue
+            idx = int(scen_dir.name.split("_")[1])
+            s = sample_by_idx.get(idx, {})
+            label = (
+                f"[{idx}] {s.get('_category', s.get('nav_maneuver', ''))}"
+                f" · {s.get('distance_m', 0):.1f}m"
+                f" · V2X=\"{s.get('nav_text', '')}\""
+            )
+            cache_scenarios.append({"scen_idx": idx, "label": label})
     return TEMPLATES.TemplateResponse(
         request,
         "tab_vqa.html",
@@ -443,11 +455,23 @@ async def tab_cam_count(request: Request):
     cache_ready = DEMO_CACHE_DIR.exists()
     cache_scenarios: list[dict] = []
     if cache_ready:
+        try:
+            samples = vlm_qa.load_samples()
+        except Exception:
+            samples = []
+        sample_by_idx = {i: s for i, s in enumerate(samples)}
         for scen_dir in sorted(DEMO_CACHE_DIR.glob("scen_*")):
             cam_meta_path = scen_dir / "cam_meta.json"
-            if cam_meta_path.exists():
-                idx = int(scen_dir.name.split("_")[1])
-                cache_scenarios.append({"scen_idx": idx, "label": f"scen_{idx:02d}"})
+            if not cam_meta_path.exists():
+                continue
+            idx = int(scen_dir.name.split("_")[1])
+            s = sample_by_idx.get(idx, {})
+            label = (
+                f"[{idx}] {s.get('_category', s.get('nav_maneuver', ''))}"
+                f" · {s.get('distance_m', 0):.1f}m"
+                f" · V2X=\"{s.get('nav_text', '')}\""
+            )
+            cache_scenarios.append({"scen_idx": idx, "label": label})
     return TEMPLATES.TemplateResponse(
         request,
         "tab_cam_count.html",
