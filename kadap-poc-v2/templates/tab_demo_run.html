@@ -1,15 +1,27 @@
 <section class="card">
-  <h2>② 시연 자동 실행 — 4 시나리오 × 3조건 영상</h2>
+  <h2>② 시연 자동 실행 — 4 시나리오 × 3조건 합성</h2>
   <p class="muted">
-    주요 시연 시나리오 4개(11m 좌회전 외 3개)에 대해 시간 진행 모드로 t0를 0.3초씩 전진하며
-    매 프레임 3조건 추론 후 60 fps 합성 영상(카메라 + BEV(조감도) + Chain-of-Causation(추론 사유)) 생성.
+    주요 시연 시나리오 4개에 대해 동일 카메라 입력에 V2X 메시지만 바꿔(연계 / 차량 단독 / 반사실)
+    3조건 추론한 결과를 한 화면에 합성. 좌측 카메라 입력 + 우측 BEV(조감도) 예측 궤적 비교 +
+    하단 조건별 Chain-of-Causation(추론 사유) 텍스트.
   </p>
 
-  {% if cache_ready %}
-  <div class="muted">사전 렌더 영상이 준비되어 있습니다.</div>
-  {% else %}
+  {% if not cache_ready %}
   <div class="model-status state-error">
-    ⚠ 사전 렌더 캐시가 없습니다. 시스템 관리자에게 문의해 주세요. (사전 렌더 약 15분 소요)
+    ⚠ 사전 렌더 캐시가 없습니다. 시스템 관리자에게 문의해 주세요.
+  </div>
+  {% elif composites %}
+  <div class="composite-grid">
+    {% for c in composites %}
+    <div class="composite-card">
+      <h4>{{ c.label }}</h4>
+      <video src="{{ c.mp4_url }}" controls loop muted preload="metadata" style="width:100%;"></video>
+    </div>
+    {% endfor %}
+  </div>
+  {% else %}
+  <div class="muted">
+    합성 영상이 아직 준비되지 않았습니다. (사전 렌더 약 14분 소요)
   </div>
   {% endif %}
 </section>

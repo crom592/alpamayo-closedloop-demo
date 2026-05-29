@@ -269,10 +269,33 @@ async def closedloop_run_poll(request: Request, job_id: str):
 
 @app.get("/tab/demo_run", response_class=HTMLResponse)
 async def tab_demo_run(request: Request):
+    cache_ready = DEMO_CACHE_DIR.exists()
+    composites: list[dict] = []
+    if cache_ready:
+        try:
+            samples = vlm_qa.load_samples()
+        except Exception:
+            samples = []
+        sample_by_idx = {i: s for i, s in enumerate(samples)}
+        for scen_dir in sorted(DEMO_CACHE_DIR.glob("scen_*")):
+            mp4 = scen_dir / "composite.mp4"
+            if not mp4.exists():
+                continue
+            idx = int(scen_dir.name.split("_")[1])
+            s = sample_by_idx.get(idx, {})
+            composites.append(
+                {
+                    "scen_idx": idx,
+                    "label": f"[{idx}] {s.get('_category', s.get('nav_maneuver', ''))}"
+                    f" · {s.get('distance_m', 0):.1f}m"
+                    f" · V2X=\"{s.get('nav_text', '')}\"",
+                    "mp4_url": f"/demo_cache/scen_{idx:02d}/composite.mp4",
+                }
+            )
     return TEMPLATES.TemplateResponse(
         request,
         "tab_demo_run.html",
-        {"cache_ready": DEMO_CACHE_DIR.exists()},
+        {"cache_ready": cache_ready, "composites": composites},
     )
 
 

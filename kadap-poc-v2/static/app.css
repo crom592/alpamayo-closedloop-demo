@@ -225,3 +225,9 @@ pre code { display: block; padding: 0.5rem; background: var(--code-bg); border-r
 
 #cl-step { width: 100%; margin: 0.5rem 0; }
 .trace-step .step-meta { max-width: 640px; }
+
+/* Tab ② composite video gallery */
+.composite-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1rem; margin-top: 1rem; }
+.composite-card { border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem; background: var(--card-bg); }
+.composite-card h4 { margin: 0 0 0.4rem; font-size: 0.9rem; color: var(--primary); }
+.composite-card video { display: block; border-radius: 4px; background: #000; }

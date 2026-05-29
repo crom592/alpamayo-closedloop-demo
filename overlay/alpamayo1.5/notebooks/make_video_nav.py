@@ -19,13 +19,15 @@ import matplotlib.pyplot as plt
 from matplotlib import font_manager as _fm
 
 # Register Korean fonts so BEV legends/titles render Hangul without tofu boxes.
-for _f in ("/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
-           "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"):
+# NotoSansCJK-Regular.ttc is a TrueType Collection — matplotlib reads only the
+# first face, which registers under the JP name (covers Hangul too).
+for _f in ("/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+           "/usr/share/fonts/truetype/nanum/NanumGothic.ttf"):
     try:
         _fm.fontManager.addfont(_f)
     except Exception:
         pass
-plt.rcParams["font.family"] = ["NanumGothic", "Noto Sans CJK KR", "DejaVu Sans"]
+plt.rcParams["font.family"] = ["Noto Sans CJK JP", "NanumGothic", "DejaVu Sans"]
 plt.rcParams["axes.unicode_minus"] = False
 import mediapy as mp
 import numpy as np
@@ -48,10 +50,18 @@ COLORS = {
 
 
 def load_font(size: int):
-    try:
-        return ImageFont.truetype("/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size)
-    except OSError:
-        return ImageFont.load_default()
+    # Prefer a CJK font so Korean caption text renders. Falls back through
+    # latin-only options and finally PIL default.
+    for path in (
+        "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+        "/usr/share/fonts/truetype/nanum/NanumGothic.ttf",
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
+    ):
+        try:
+            return ImageFont.truetype(path, size)
+        except OSError:
+            continue
+    return ImageFont.load_default()
 
 
 def run_one_condition(model, processor, data, nav_text):
