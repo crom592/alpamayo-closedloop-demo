@@ -415,19 +415,19 @@ async def vqa_live(request: Request):
 
 @app.get("/vqa/preset", response_class=HTMLResponse)
 async def vqa_preset(request: Request, scen_idx: int):
+    """Show only the scenario camera preview — cached Q&A list was removed
+    because the canned answers didn't always match the actual scene. Live
+    inference (POST /vqa/live) is now the single source of VQA answers."""
     if not DEMO_CACHE_DIR.exists():
         return HTMLResponse("<div class='error'>cache 없음</div>")
-    vqa_path = DEMO_CACHE_DIR / f"scen_{scen_idx:02d}" / "vqa.json"
-    if not vqa_path.exists():
-        return HTMLResponse("<div class='error'>vqa.json 없음</div>")
-    data = json.loads(vqa_path.read_text())
-    qa = data if isinstance(data, list) else data.get("qa", [])
+    scen_dir = DEMO_CACHE_DIR / f"scen_{scen_idx:02d}"
+    if not scen_dir.exists():
+        return HTMLResponse(f"<div class='error'>scen_{scen_idx:02d} 없음</div>")
     return TEMPLATES.TemplateResponse(
         request,
         "_vqa_preset.html",
         {
             "scen_idx": scen_idx,
-            "qa": qa,
             "camera_mp4": f"/demo_cache/scen_{scen_idx:02d}/camera.mp4",
         },
     )

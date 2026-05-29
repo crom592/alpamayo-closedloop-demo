@@ -1,16 +1,7 @@
-<div class="row" style="gap: 1rem; align-items: flex-start;">
-  <div>
-    <h3>주행 영상</h3>
-    <video src="{{ camera_mp4 }}" controls loop muted preload="metadata" style="max-width:420px;"></video>
-  </div>
-  <div style="flex:1;">
-    <h3>사전 캐시된 한국어 Q&A (8개)</h3>
-    {% for item in qa %}
-    <div class="cot-card">
-      <h4>Q: {{ item.q_kr or item.q or '' }}</h4>
-      <p class="muted" style="margin: 0 0 0.3rem; font-size: 0.8rem;">EN: {{ item.q_en or '' }}</p>
-      <p class="cot-text">A: {{ item.answer or item.a or '' }}</p>
-    </div>
-    {% endfor %}
-  </div>
+<div>
+  <h3>주행 영상</h3>
+  <video src="{{ camera_mp4 }}" controls loop muted preload="metadata" style="max-width:560px;"></video>
+  <p class="muted" style="font-size:0.85rem; margin-top:0.3rem;">
+    아래 라이브 VQA 폼에서 이 장면에 대해 자유 질문을 던지세요.
+  </p>
 </div>
