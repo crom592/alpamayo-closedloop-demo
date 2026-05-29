@@ -222,21 +222,28 @@ def run_live_vqa(scenario_idx: int, question_en: str) -> str:
             raw = str(raw)
     text = raw.strip()
 
-    # Detect grounding output: "[x1, y1, x2, y2]" of 4 normalized floats.
+    # Detect grounding output (1 or more bboxes). Each bbox is "[x1, y1, x2, y2]"
+    # of 4 normalized floats in 0..1; multiple bboxes are comma-separated.
     import re as _re
-    m = _re.fullmatch(r"\[\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*\]", text)
-    if m:
-        try:
-            nums = [float(g) for g in m.groups()]
-            if all(0.0 <= n <= 1.0 for n in nums):
-                x1, y1, x2, y2 = nums
-                return (
-                    f"[객체 감지] 정규화 bbox=({x1:.3f}, {y1:.3f}) → ({x2:.3f}, {y2:.3f}). "
-                    "묘사형 질문(\"Describe the road.\", \"Describe the weather.\")을 쓰면 "
-                    "자연어 응답이 나옵니다."
-                )
-        except ValueError:
-            pass
+    bbox_re = r"\[\s*[\d.]+(?:\s*,\s*[\d.]+){3}\s*\]"
+    if _re.fullmatch(rf"{bbox_re}(?:\s*,\s*{bbox_re})*", text):
+        bboxes: list[tuple[float, float, float, float]] = []
+        for m in _re.finditer(bbox_re, text):
+            nums = [float(n) for n in _re.findall(r"[\d.]+", m.group())]
+            if len(nums) == 4 and all(0.0 <= n <= 1.0 for n in nums):
+                bboxes.append(tuple(nums))  # type: ignore[arg-type]
+        if bboxes:
+            lines = [
+                f"  · 영역 {i + 1}: ({b[0]:.3f}, {b[1]:.3f}) → ({b[2]:.3f}, {b[3]:.3f})"
+                for i, b in enumerate(bboxes)
+            ]
+            return (
+                f"[객체 감지] {len(bboxes)}개 정규화 bbox 영역 (좌표 0~1):\n"
+                + "\n".join(lines)
+                + "\n자연어 묘사를 원하면 도메인이 좁은 질문을 쓰세요 "
+                "(예: \"Describe the road and weather.\", "
+                "\"Describe the lighting and traffic.\")."
+            )
     return text
 
 

@@ -25,11 +25,24 @@
   <h3>▶ 라이브 VQA — 직접 질문 입력</h3>
   <p class="muted">
     위에서 시나리오를 먼저 선택하면 같은 장면에 자유 질문을 던질 수 있습니다.
-    Alpamayo VQA는 두 종류 응답을 반환합니다:
-    <strong>묘사형 질문</strong>("Describe the road.", "Describe the weather.") → 자연어,
-    <strong>객체/위치 질문</strong>("What do you see ahead?", "Are there any vehicles?") → bbox 좌표.
-    1회 추론 약 30~40초.
+    1회 추론 약 30~40초. Alpamayo VQA는 dual-mode 모델이라 질문 유형에 따라
+    응답 형식이 달라집니다:
   </p>
+  <ul class="muted" style="font-size:0.85rem; margin: 0.25rem 0 0.75rem 1.5rem;">
+    <li><strong>도메인이 좁고 구체적인 묘사 질문 → 자연어 응답</strong>
+      <ul>
+        <li><code>Describe the road and weather.</code></li>
+        <li><code>Describe the lighting and traffic.</code></li>
+        <li><code>Describe what is happening at this intersection.</code></li>
+      </ul>
+    </li>
+    <li><strong>일반/객체/위치 질문 → bbox 좌표 (객체 감지 모드)</strong>
+      <ul>
+        <li><code>Describe the scene.</code>, <code>What do you see?</code>, <code>Are there any vehicles?</code>
+        — 모두 객체 감지로 빠짐 (모델 자체의 동작)</li>
+      </ul>
+    </li>
+  </ul>
   <form hx-post="/vqa/live" hx-target="#vqa-live-result" hx-swap="innerHTML"
         hx-indicator="#vqa-live-spinner" hx-include="#vqa-scen">
     <div class="form-row">
