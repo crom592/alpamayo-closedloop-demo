@@ -75,7 +75,7 @@ def cap_01_initial(page, base_url, out):
 
 def cap_01_input(page, base_url, out):
     goto_tab(page, base_url, "scenario_eval")
-    page.select_option('select[name="scenario_idx"]', "5")
+    page.select_option('select[name="scenario_idx"]', "5")  # index 5: 우회전 샘플로 V2X 입력 없는 현 UI에서 결과 화면 유발
     page.wait_for_timeout(500)
     page.screenshot(path=str(out))
 
@@ -112,11 +112,12 @@ def cap_03_initial(page, base_url, out):
 def cap_03_preset(page, base_url, out):
     goto_tab(page, base_url, "interactive")
     page.select_option('select[name="scen_idx"]', "0")
-    page.wait_for_selector("#int-loaded video, #int-loaded button", timeout=10000)
+    page.wait_for_selector("#int-loaded video", timeout=10000)
     page.wait_for_timeout(800)
-    btn = page.locator("#int-loaded button").first
-    if btn.count() > 0:
-        btn.click()
+    # click a V2X preset button if any
+    btns = page.locator("#int-loaded button")
+    if btns.count() > 0:
+        btns.first.click()
         page.wait_for_timeout(600)
     page.screenshot(path=str(out), full_page=True)
 
