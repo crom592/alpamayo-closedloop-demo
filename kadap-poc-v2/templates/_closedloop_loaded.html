@@ -1,3 +1,14 @@
+{% if composite_url %}
+<div class="closedloop-video">
+  <h3 style="margin-top:0;">▶ NRE 합성 영상 (front_wide 120fov)</h3>
+  <video src="{{ composite_url }}" controls loop preload="metadata"
+         style="max-width:640px; display:block; margin-bottom:1rem;"></video>
+</div>
+{% else %}
+<div class="muted" style="margin-bottom:1rem;">
+  ℹ 영상 미생성. <code>python scripts/render_closedloop_videos.py</code> 실행 후 rollout 재선택.
+</div>
+{% endif %}
 <div class="muted">
   ✅ {{ n_steps }} step / {{ rollout.driver }} / V2X="{{ rollout.v2x_text or '(none)' }}"
   · frames 캐시: {% if frames_cached %}있음{% else %}없음 (📷 버튼){% endif %}

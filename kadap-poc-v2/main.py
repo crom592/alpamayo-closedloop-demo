@@ -544,6 +544,11 @@ async def closedloop_load(request: Request, uuid: str | None = None):
             "n_steps": len(steps),
             "max_step": max(0, len(steps) - 1),
             "frames_cached": (rollout.dir / trace_mod.FRAMES_DIRNAME).exists(),
+            "composite_url": (
+                f"/closedloop_videos/{uuid}.mp4"
+                if (CLOSEDLOOP_VIDEOS_DIR / f"{uuid}.mp4").exists()
+                else None
+            ),
             "m_summary": {
                 "n_steps": m.n_steps,
                 "duration_s": m.duration_s,
