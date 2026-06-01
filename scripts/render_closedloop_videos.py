@@ -50,7 +50,11 @@ def render_one(rollout: RolloutRef, force: bool) -> Path | None:
         return out
 
     print(f"  · {rollout.rollout_uuid[:12]}: ensuring frames…")
-    frames_dir = trace_mod.ensure_frames_extracted(rollout, force=True, timeout=900)
+    try:
+        frames_dir = trace_mod.ensure_frames_extracted(rollout, force=True, timeout=900)
+    except Exception as exc:
+        print(f"  ❌ {rollout.rollout_uuid[:12]}: frame extract failed: {exc}")
+        return None
     cam_dir = frames_dir / CAMERA_NAME
     if not cam_dir.exists():
         print(f"  ❌ {rollout.rollout_uuid[:12]}: no {CAMERA_NAME} after extract")
@@ -85,6 +89,7 @@ def render_one(rollout: RolloutRef, force: bool) -> Path | None:
         ]
         result = subprocess.run(cmd, capture_output=True)
         if result.returncode != 0:
+            out.unlink(missing_ok=True)
             print(f"  ❌ {rollout.rollout_uuid[:12]} ffmpeg fail: {result.stderr.decode()[:200]}")
             return None
 
