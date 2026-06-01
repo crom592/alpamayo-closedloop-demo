@@ -231,3 +231,101 @@ pre code { display: block; padding: 0.5rem; background: var(--code-bg); border-r
 .composite-card { border: 1px solid var(--border); border-radius: 6px; padding: 0.6rem; background: var(--card-bg); }
 .composite-card h4 { margin: 0 0 0.4rem; font-size: 0.9rem; color: var(--primary); }
 .composite-card video { display: block; border-radius: 4px; background: #000; }
+
+/* ---------- 사용 가이드 탭 ---------- */
+.guide-page {
+  padding: 0;
+}
+.guide-layout {
+  display: grid;
+  grid-template-columns: 220px 1fr;
+  gap: 2rem;
+  align-items: start;
+}
+.guide-toc {
+  position: sticky;
+  top: 1rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem 1.25rem;
+  font-size: 0.9rem;
+}
+.guide-toc h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  color: var(--primary);
+}
+.guide-toc ol {
+  margin: 0;
+  padding-left: 1.25rem;
+}
+.guide-toc li { margin-bottom: 0.35rem; }
+.guide-toc a {
+  color: var(--fg);
+  text-decoration: none;
+}
+.guide-toc a:hover {
+  color: var(--primary);
+  text-decoration: underline;
+}
+
+.guide-body { max-width: 900px; }
+
+.guide-section {
+  margin-bottom: 3rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.guide-section:last-child { border-bottom: none; }
+.guide-section h2 {
+  color: var(--primary);
+  margin-top: 0;
+  scroll-margin-top: 1rem;
+}
+.guide-section h3 {
+  margin-top: 1.5rem;
+  font-size: 1rem;
+  color: var(--primary);
+}
+
+.guide-purpose {
+  background: #fff7e6;
+  border-left: 3px solid var(--accent);
+  padding: 0.75rem 1rem;
+  margin-bottom: 1rem;
+}
+
+.guide-screenshot {
+  margin: 1.25rem 0;
+  text-align: center;
+}
+.guide-screenshot img {
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+}
+.guide-screenshot figcaption {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 0.4rem;
+}
+
+.guide-faq dt {
+  font-weight: 600;
+  margin-top: 0.75rem;
+}
+.guide-faq dd {
+  margin-left: 1rem;
+  color: var(--fg);
+}
+
+@media (max-width: 900px) {
+  .guide-layout {
+    grid-template-columns: 1fr;
+  }
+  .guide-toc {
+    position: static;
+  }
+}
