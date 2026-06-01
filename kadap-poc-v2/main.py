@@ -124,8 +124,13 @@ def _scenario_view(s: dict) -> dict:
 @app.get("/", response_class=HTMLResponse)
 async def landing(request: Request):
     return TEMPLATES.TemplateResponse(
-        request, "base.html", {"active_tab": "scenario_eval"}
+        request, "base.html", {"active_tab": "guide"}
     )
+
+
+@app.get("/tab/guide", response_class=HTMLResponse)
+async def tab_guide(request: Request):
+    return TEMPLATES.TemplateResponse(request, "tab_guide.html", {})
 
 
 # ---------------------------------------------------------------------------

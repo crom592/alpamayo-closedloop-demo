@@ -17,6 +17,7 @@
 
 <nav class="tabs">
   {% set tabs = [
+    ('guide',         '📖 사용 가이드'),
     ('scenario_eval', '① 시나리오 단건 평가'),
     ('demo_run',      '② 시연 자동 실행'),
     ('interactive',   '③ 실시간 인터랙티브'),
@@ -34,7 +35,7 @@
   {% endfor %}
 </nav>
 
-<main id="content" hx-get="/tab/scenario_eval" hx-trigger="load" hx-swap="innerHTML">
+<main id="content" hx-get="/tab/guide" hx-trigger="load" hx-swap="innerHTML">
   <div class="muted">로딩 중…</div>
 </main>
 
