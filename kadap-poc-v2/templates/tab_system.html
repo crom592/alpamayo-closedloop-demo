@@ -25,7 +25,7 @@
         <th>V2X 어댑터</th><td>운영자 자연어 입력 → "Turn left in Nm" 표준 포맷 변환</td></tr>
     <tr><th>모델</th><td colspan="3"><strong>NVIDIA Alpamayo 1.5 (10B VLA)</strong> — VLM(Cosmos-Reason2 8B) + Trajectory Expert(궤적 예측 2B)</td></tr>
     <tr><th>평가 지표</th><td colspan="3">ADE(평균 거리오차) · FDE(최종 거리오차) · Max lateral deviation(최대 측방 편차) · Heading error(방위 오차)</td></tr>
-    <tr><th>폐루프 시뮬</th><td colspan="3">폐루프 시뮬레이터 + Neural Rendering(폐루프 카메라 합성) · NVIDIA A40 GPU 환경</td></tr>
+    <tr><th>Closed-loop 시뮬</th><td colspan="3">Closed-loop 시뮬레이터 + Neural Rendering(카메라 합성) · NVIDIA A40 GPU 환경</td></tr>
     <tr><th>한계 ① 데이터 도메인</th><td colspan="3">미국 NuRec 클립 기반 → 1차년도에 한국 도로/V2X 메시지 fine-tuning 예정</td></tr>
     <tr><th>한계 ② nav 포맷</th><td colspan="3">"Turn {left/right} in Nm" 표준 포맷만 학습 → 한국형 V2X 메시지 어댑터 + LoRA 어댑테이션 계획</td></tr>
     <tr><th>한계 ③ 추론 지연</th><td colspan="3">약 5초/추론 → 2차년도에 TensorRT + 모델 경량화(distillation) 적용 예정</td></tr>

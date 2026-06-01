@@ -37,11 +37,12 @@
 
   <hr style="margin: 2rem 0;">
 
-  <h3>▶ 폐루프(closed-loop) 시뮬레이션 검증 (선택)</h3>
+  <h3>▶ Closed-Loop 시뮬레이션 검증 (선택)</h3>
   <p class="muted">
-    위 V2X 메시지를 폐루프 시뮬레이터에 주입하여 실제 닫힌 루프로 검증합니다 (약 10~15분 소요).
+    위 V2X 메시지를 closed-loop 시뮬레이터에 주입하여 실제 닫힌 루프로 검증합니다
+    (단일 scene 약 60~80분 소요, 사전 렌더링 권장).
     자율주행 모델(Alpamayo)이 매 사이클 추론 결과로 ego 차량을 운전하고,
-    Neural Rendering(폐루프 카메라 합성)이 다음 프레임을 실시간 생성합니다.
+    Neural Rendering이 다음 프레임을 합성합니다.
   </p>
   <form hx-post="/closedloop/run" hx-target="#nre-progress" hx-swap="innerHTML">
     <input type="hidden" name="v2x_text" id="nre-v2x-mirror">
@@ -51,7 +52,7 @@
               document.getElementById('nre-v2x-mirror').value = document.getElementById('se-v2x').value;
               this.form.requestSubmit();
             ">
-      ▶ 폐루프 시뮬레이션 실행 (약 10~15분)
+      ▶ Closed-Loop 시뮬레이션 실행 (약 60~80분)
     </button>
   </form>
   <div id="nre-progress"></div>

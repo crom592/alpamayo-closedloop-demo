@@ -6,7 +6,7 @@
     ③ 실시간 인터랙티브   — 캐시 기반 V2X 프리셋 즉시 전환
     ④ VQA                — 시각 질의응답 (캐시 + 라이브)
     ⑤ 카메라 입력 개수    — 1/2/4 cam 비교 (캐시 필요)
-    ⑥ NRE 클로즈드루프    — step-by-step trace + Plotly trajectory
+    ⑥ NRE Closed-Loop    — step-by-step trace + Plotly trajectory
     ⓘ 시스템             — docker/gpu 상태 + 시나리오 카탈로그 + 시스템 구성
 
 원본 POC 함수 (`overlay/alpamayo1.5/notebooks/...`) 그대로 import 재사용.
@@ -500,7 +500,7 @@ async def cam_count_load(request: Request, scen_idx: int):
 
 
 # ---------------------------------------------------------------------------
-# Tab ⑥ NRE 클로즈드루프 — trace + metrics + PDF report
+# Tab ⑥ NRE Closed-Loop — trace + metrics + PDF report
 # ---------------------------------------------------------------------------
 
 
