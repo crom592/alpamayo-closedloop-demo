@@ -48,11 +48,11 @@
         </p>
         <figure class="guide-screenshot">
           <img src="/static/manual/screenshots/01_scenario_eval_initial.png" alt="초기 상태">
-          <figcaption>초기: 모델 적재 버튼 + 시나리오/V2X preset 드롭다운</figcaption>
+          <figcaption>초기: 모델 적재 버튼 + 시나리오 드롭다운 + V2X 메시지 텍스트 입력란</figcaption>
         </figure>
         <figure class="guide-screenshot">
           <img src="/static/manual/screenshots/01_scenario_eval_input.png" alt="입력 선택">
-          <figcaption>시나리오 + V2X preset 선택</figcaption>
+          <figcaption>시나리오 선택 + V2X 메시지 입력</figcaption>
         </figure>
         <figure class="guide-screenshot">
           <img src="/static/manual/screenshots/01_scenario_eval_result.png" alt="결과 BEV + 메트릭">
@@ -62,8 +62,8 @@
         <ol>
           <li>처음 진입 시 <strong>"모델 적재"</strong> 클릭 → 약 1분 대기 (상태 자동 갱신)</li>
           <li>시나리오 드롭다운에서 평가 대상 선택 (예: <code>[00] 근거리 좌회전 · 11.2m</code>)</li>
-          <li>V2X preset 선택 (예: <code>↰ Turn left in 5m</code>)</li>
-          <li>baseline / 반사실 체크박스 그대로 두고 <strong>"▶ 평가 실행"</strong> 클릭</li>
+          <li>V2X 메시지 입력창에 메시지 타이핑 (예: <code>Turn left in 5m</code>), 또는 비워서 시나리오 기본값 사용</li>
+          <li>baseline / 반사실 체크박스 그대로 두고 <strong>"▶ 3조건 단일 추론 실행"</strong> 클릭</li>
           <li>약 30~60초 후 BEV 이미지 3장 + 메트릭 테이블 출력</li>
         </ol>
         <h3>결과 해석</h3>
@@ -135,7 +135,7 @@
         <ol>
           <li>시나리오 드롭다운에서 평가 대상 선택</li>
           <li>카메라 영상 + 기본 BEV 자동 표출</li>
-          <li>V2X preset 버튼 (예: <code>Turn left in 30m</code>) 클릭 → BEV 즉시 갱신</li>
+          <li>V2X preset 버튼 (예: <code>↰ left 30m</code>) 클릭 → BEV 즉시 갱신</li>
           <li>여러 preset을 순서대로 클릭하며 BEV 차이 관찰</li>
         </ol>
         <h3>결과 해석</h3>
