@@ -48,3 +48,6 @@ Thumbs.db
 
 # Closed-loop rendered videos (artifacts, can be regenerated)
 kadap-poc-v2/closedloop_videos/*.mp4
+
+# Manual capture Playwright venv (regenerable)
+scripts/manual_capture/.venv/
