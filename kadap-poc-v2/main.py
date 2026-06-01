@@ -58,6 +58,13 @@ if DEMO_CACHE_DIR.exists():
     app.mount(
         "/demo_cache", StaticFiles(directory=str(DEMO_CACHE_DIR)), name="demo_cache"
     )
+CLOSEDLOOP_VIDEOS_DIR = HERE / "closedloop_videos"
+if CLOSEDLOOP_VIDEOS_DIR.exists():
+    app.mount(
+        "/closedloop_videos",
+        StaticFiles(directory=str(CLOSEDLOOP_VIDEOS_DIR)),
+        name="closedloop_videos",
+    )
 
 SIM_EXECUTOR = ThreadPoolExecutor(max_workers=1, thread_name_prefix="sim")
 PARSE_EXECUTOR = ThreadPoolExecutor(max_workers=4, thread_name_prefix="parse")

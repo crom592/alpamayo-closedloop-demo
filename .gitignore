@@ -45,3 +45,6 @@ Thumbs.db
 .vscode/
 .idea/
 *.swp
+
+# Closed-loop rendered videos (artifacts, can be regenerated)
+kadap-poc-v2/closedloop_videos/*.mp4
