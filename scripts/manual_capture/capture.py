@@ -199,46 +199,67 @@ def main():
 
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    print("=== Ensuring Alpamayo model loaded (Tab ① /scenario_eval/load_model) ===")
-    ensure_model_loaded(args.url)
+    # Phase 1: idle-state captures (Tab ① must show 모델 적재 버튼).
+    # Phase 2 needs the model loaded (Tab ① result, Tab ④ VQA, etc.).
+    idle_targets = [
+        ("landing",                    capture_landing),
+        ("01_scenario_eval_initial",   cap_01_initial),
+        ("02_demo_run_gallery",        cap_02_gallery),
+        ("02_demo_run_playing",        cap_02_playing),
+        ("03_interactive_initial",     cap_03_initial),
+        ("05_cam_count_initial",       cap_05_initial),
+        ("06_closedloop_initial",      cap_06_initial),
+        ("06_closedloop_loaded",       cap_06_loaded),
+        ("info_system",                cap_info_system),
+    ]
+    ready_targets = [
+        ("01_scenario_eval_input",     cap_01_input),
+        ("01_scenario_eval_result",    cap_01_result),
+        ("03_interactive_preset",      cap_03_preset),
+        ("04_vqa_initial",             cap_04_initial),
+        ("04_vqa_question",            cap_04_question),
+        ("04_vqa_answer",              cap_04_answer),
+        ("05_cam_count_result",        cap_05_result),
+    ]
 
-    with sync_playwright() as pw:
-        browser = pw.chromium.launch(headless=True)
-        ctx = browser.new_context(viewport=VIEWPORT, locale="ko-KR")
-        page = ctx.new_page()
-
-        targets = [
-            ("landing",                    capture_landing),
-            ("01_scenario_eval_initial",   cap_01_initial),
-            ("01_scenario_eval_input",     cap_01_input),
-            ("01_scenario_eval_result",    cap_01_result),
-            ("02_demo_run_gallery",        cap_02_gallery),
-            ("02_demo_run_playing",        cap_02_playing),
-            ("03_interactive_initial",     cap_03_initial),
-            ("03_interactive_preset",      cap_03_preset),
-            ("04_vqa_initial",             cap_04_initial),
-            ("04_vqa_question",            cap_04_question),
-            ("04_vqa_answer",              cap_04_answer),
-            ("05_cam_count_initial",       cap_05_initial),
-            ("05_cam_count_result",        cap_05_result),
-            ("06_closedloop_initial",      cap_06_initial),
-            ("06_closedloop_loaded",       cap_06_loaded),
-            ("info_system",                cap_info_system),
-        ]
-        for name, fn in targets:
+    def _run(phase_name, phase_targets, browser_ctx):
+        page = browser_ctx.new_page()
+        for name, fn in phase_targets:
             if args.only and args.only not in name:
                 continue
             out = OUT_DIR / f"{name}.png"
             if out.exists() and not args.force and not args.only:
                 print(f"  ✅ {name} cached (skip)")
                 continue
-            print(f"  · {name} capturing…")
+            print(f"  · [{phase_name}] {name} capturing…")
             try:
                 fn(page, args.url, out)
                 size = out.stat().st_size / 1024
                 print(f"  ✅ {name} → {out.name} ({size:.0f}KB)")
             except Exception as exc:  # noqa: BLE001
                 print(f"  ❌ {name}: {exc}")
+        page.close()
+
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        ctx = browser.new_context(viewport=VIEWPORT, locale="ko-KR")
+
+        # Phase 1 — no model load yet.
+        print("=== Phase 1: idle-state captures ===")
+        _run("idle", idle_targets, ctx)
+
+        # Skip the model load if --only filter matches no ready_targets.
+        any_ready_needed = (
+            not args.only
+            or any(args.only in name for name, _ in ready_targets)
+        )
+        if any_ready_needed:
+            print("=== Ensuring Alpamayo model loaded (Tab ① /scenario_eval/load_model) ===")
+            ensure_model_loaded(args.url)
+            print("=== Phase 2: model-loaded captures ===")
+            _run("ready", ready_targets, ctx)
+        else:
+            print("=== Skipping Phase 2 (no model-dependent target matches --only) ===")
 
         browser.close()
 
