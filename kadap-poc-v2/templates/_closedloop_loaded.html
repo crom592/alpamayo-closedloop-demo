@@ -1,8 +1,16 @@
 {% if sync_url %}
 <div class="closedloop-video">
-  <h3 style="margin-top:0;">▶ 미니맵 + 카메라 sync (통합 환경 프로토타입)</h3>
-  <p class="muted" style="margin-top:0;">우상단 BEV 미니맵(자차 위치·헤딩·예측 의도) + 카메라 뷰가 같은 timestamp로 동기 재생됩니다. 본격 PoC 산출물 ⓑ의 prototype 단계 시도.</p>
+  <h3 style="margin-top:0;">▶ 미니맵 + 카메라 sync (ⓑ-1 high-fidelity 트랙)</h3>
+  <p class="muted" style="margin-top:0;">우상단 BEV 미니맵(자차 위치·헤딩·예측 의도) + 카메라 뷰가 같은 timestamp로 동기 재생. 시연·정성 평가용.</p>
   <video src="{{ sync_url }}" controls loop preload="metadata"
+         style="max-width:720px; display:block; margin-bottom:1rem;"></video>
+</div>
+{% endif %}
+{% if minimap_url %}
+<div class="closedloop-video">
+  <h3 style="margin-top:0;">▶ 미니맵 only (ⓑ-2 light-weight 트랙)</h3>
+  <p class="muted" style="margin-top:0;">NRE 카메라 합성 단계 skip, ASL trace의 step 데이터로 미니맵만 단독 렌더. 긴 시나리오·정량 sweep용 (rollout당 1-2분, NRE 대비 5-10× 단축).</p>
+  <video src="{{ minimap_url }}" controls loop preload="metadata"
          style="max-width:720px; display:block; margin-bottom:1rem;"></video>
 </div>
 {% endif %}

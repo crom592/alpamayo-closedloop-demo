@@ -65,10 +65,12 @@ def _render_bev_frame(
     v2x_text: str,
     x_lim: tuple[float, float],
     y_lim: tuple[float, float],
+    fig_size: tuple[float, float] = (5.0, 5.0),
+    dpi: int = 120,
 ) -> None:
     """Render one minimap PNG for step k (0-indexed)."""
     cur = steps[k]
-    fig, ax = plt.subplots(figsize=(5.0, 5.0), dpi=120)
+    fig, ax = plt.subplots(figsize=fig_size, dpi=dpi)
     fig.patch.set_facecolor("#0e1117")
     ax.set_facecolor("#0e1117")
 
@@ -148,15 +150,17 @@ def _bev_axis_limits(steps) -> tuple[tuple[float, float], tuple[float, float]]:
     return ((cx - half, cx + half), (cy - half, cy + half))
 
 
-def render_sync(rollout: RolloutRef, force: bool = False) -> Path | None:
+def render_sync(rollout: RolloutRef, force: bool = False, minimap_only: bool = False) -> Path | None:
+    """Render the BEV minimap mp4 (always). If minimap_only is False, also PiP-overlay onto the camera mp4."""
     cam_mp4 = CACHE_DIR / f"{rollout.rollout_uuid}.mp4"
-    if not cam_mp4.exists():
-        print(f"  ❌ {rollout.rollout_uuid[:12]}: camera mp4 missing")
+    if not minimap_only and not cam_mp4.exists():
+        print(f"  ❌ {rollout.rollout_uuid[:12]}: camera mp4 missing (need --minimap-only for camera-less rollouts)")
         return None
 
-    out = CACHE_DIR / f"sync_{rollout.rollout_uuid}.mp4"
+    prefix = "minimap" if minimap_only else "sync"
+    out = CACHE_DIR / f"{prefix}_{rollout.rollout_uuid}.mp4"
     if out.exists() and not force:
-        print(f"  ✅ {rollout.rollout_uuid[:12]} sync cached (skip)")
+        print(f"  ✅ {rollout.rollout_uuid[:12]} {prefix} cached (skip)")
         return out
 
     print(f"  · {rollout.rollout_uuid[:12]}: parsing ASL steps…")
@@ -168,45 +172,63 @@ def render_sync(rollout: RolloutRef, force: bool = False) -> Path | None:
     v2x_text = rollout.meta.get("v2x_text") or "(V2X 미기록)"
     x_lim, y_lim = _bev_axis_limits(steps)
 
+    fig_size = (10.0, 7.0) if minimap_only else (5.0, 5.0)
+    dpi = 120
+
     print(f"  · {rollout.rollout_uuid[:12]}: rendering {len(steps)} BEV frames…")
     with tempfile.TemporaryDirectory() as tmp:
         tmp_dir = Path(tmp)
         for k in range(len(steps)):
-            _render_bev_frame(tmp_dir / f"bev_{k:04d}.png", steps, k, v2x_text, x_lim, y_lim)
+            _render_bev_frame(tmp_dir / f"bev_{k:04d}.png", steps, k, v2x_text, x_lim, y_lim,
+                              fig_size=fig_size, dpi=dpi)
 
-        bev_mp4 = tmp_dir / "bev.mp4"
-        r = subprocess.run([
-            "ffmpeg", "-y", "-loglevel", "error",
-            "-framerate", str(FPS),
-            "-i", str(tmp_dir / "bev_%04d.png"),
-            "-c:v", "libx264", "-pix_fmt", "yuv420p",
-            "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
-            str(bev_mp4),
-        ], capture_output=True)
-        if r.returncode != 0:
-            print(f"  ❌ BEV ffmpeg fail: {r.stderr.decode()[:200]}")
-            return None
+        if minimap_only:
+            out.parent.mkdir(parents=True, exist_ok=True)
+            r = subprocess.run([
+                "ffmpeg", "-y", "-loglevel", "error",
+                "-framerate", str(FPS),
+                "-i", str(tmp_dir / "bev_%04d.png"),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+                str(out),
+            ], capture_output=True)
+            if r.returncode != 0:
+                out.unlink(missing_ok=True)
+                print(f"  ❌ minimap ffmpeg fail: {r.stderr.decode()[:200]}")
+                return None
+        else:
+            bev_mp4 = tmp_dir / "bev.mp4"
+            r = subprocess.run([
+                "ffmpeg", "-y", "-loglevel", "error",
+                "-framerate", str(FPS),
+                "-i", str(tmp_dir / "bev_%04d.png"),
+                "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                "-vf", "pad=ceil(iw/2)*2:ceil(ih/2)*2",
+                str(bev_mp4),
+            ], capture_output=True)
+            if r.returncode != 0:
+                print(f"  ❌ BEV ffmpeg fail: {r.stderr.decode()[:200]}")
+                return None
 
-        # PiP: camera mp4 (background) + BEV (top-right overlay, ~30% width)
-        print(f"  · {rollout.rollout_uuid[:12]}: PiP overlay…")
-        out.parent.mkdir(parents=True, exist_ok=True)
-        r = subprocess.run([
-            "ffmpeg", "-y", "-loglevel", "error",
-            "-i", str(cam_mp4),
-            "-i", str(bev_mp4),
-            "-filter_complex",
-            "[1:v]scale=iw*0.45:-1[bev];[0:v][bev]overlay=W-w-20:20",
-            "-c:v", "libx264", "-pix_fmt", "yuv420p",
-            "-shortest",
-            str(out),
-        ], capture_output=True)
-        if r.returncode != 0:
-            out.unlink(missing_ok=True)
-            print(f"  ❌ sync ffmpeg fail: {r.stderr.decode()[:200]}")
-            return None
+            print(f"  · {rollout.rollout_uuid[:12]}: PiP overlay…")
+            out.parent.mkdir(parents=True, exist_ok=True)
+            r = subprocess.run([
+                "ffmpeg", "-y", "-loglevel", "error",
+                "-i", str(cam_mp4),
+                "-i", str(bev_mp4),
+                "-filter_complex",
+                "[1:v]scale=iw*0.45:-1[bev];[0:v][bev]overlay=W-w-20:20",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p",
+                "-shortest",
+                str(out),
+            ], capture_output=True)
+            if r.returncode != 0:
+                out.unlink(missing_ok=True)
+                print(f"  ❌ sync ffmpeg fail: {r.stderr.decode()[:200]}")
+                return None
 
     size_kb = out.stat().st_size / 1024
-    print(f"  ✅ {rollout.rollout_uuid[:12]} → {out.name} ({size_kb:.0f}KB)")
+    print(f"  ✅ {rollout.rollout_uuid[:12]} → {out.name} ({size_kb:.0f}KB, {len(steps)} steps)")
     return out
 
 
@@ -215,6 +237,8 @@ def main():
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--uuid", help="rollout uuid substring (renders just this one)")
     ap.add_argument("--all", action="store_true", help="render all rollouts")
+    ap.add_argument("--minimap-only", action="store_true",
+                    help="render BEV minimap mp4 without PiP (camera mp4 not required) — for ⓑ-2 light-weight track demo")
     args = ap.parse_args()
 
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
@@ -228,7 +252,7 @@ def main():
     ok = fail = 0
     for r in rollouts:
         try:
-            res = render_sync(r, force=args.force)
+            res = render_sync(r, force=args.force, minimap_only=args.minimap_only)
             ok += 1 if res else 0
             fail += 0 if res else 1
         except Exception as exc:  # noqa: BLE001
