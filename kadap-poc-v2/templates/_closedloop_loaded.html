@@ -1,10 +1,18 @@
+{% if sync_url %}
+<div class="closedloop-video">
+  <h3 style="margin-top:0;">▶ 미니맵 + 카메라 sync (통합 환경 프로토타입)</h3>
+  <p class="muted" style="margin-top:0;">우상단 BEV 미니맵(자차 위치·헤딩·예측 의도) + 카메라 뷰가 같은 timestamp로 동기 재생됩니다. 본격 PoC 산출물 ⓑ의 prototype 단계 시도.</p>
+  <video src="{{ sync_url }}" controls loop preload="metadata"
+         style="max-width:720px; display:block; margin-bottom:1rem;"></video>
+</div>
+{% endif %}
 {% if composite_url %}
 <div class="closedloop-video">
-  <h3 style="margin-top:0;">▶ NRE 합성 영상 (front_wide 120fov)</h3>
+  <h3 style="margin-top:0;">▶ NRE 합성 영상 (카메라 단독, front_wide 120fov)</h3>
   <video src="{{ composite_url }}" controls loop preload="metadata"
          style="max-width:640px; display:block; margin-bottom:1rem;"></video>
 </div>
-{% else %}
+{% elif not sync_url %}
 <div class="muted" style="margin-bottom:1rem;">
   ℹ 영상 미생성. <code>python scripts/render_closedloop_videos.py</code> 실행 후 rollout 재선택.
 </div>

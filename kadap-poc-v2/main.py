@@ -554,6 +554,11 @@ async def closedloop_load(request: Request, uuid: str | None = None):
                 if (CLOSEDLOOP_VIDEOS_DIR / f"{uuid}.mp4").exists()
                 else None
             ),
+            "sync_url": (
+                f"/closedloop_videos/sync_{uuid}.mp4"
+                if (CLOSEDLOOP_VIDEOS_DIR / f"sync_{uuid}.mp4").exists()
+                else None
+            ),
             "m_summary": {
                 "n_steps": m.n_steps,
                 "duration_s": m.duration_s,
