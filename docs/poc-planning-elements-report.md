@@ -9,8 +9,8 @@
 ## 1. TL;DR
 
 - 이 PoC의 본질은 **"V2X 데이터를 받아서, 실제 도로 상황에서 그 데이터들이 돌아가는 환경을 준비해주고, 자율주행 로직 연구자가 그 환경에서 자체 로직을 테스트할 수 있게 해주는 도구"**입니다.
-- 작성자가 단독 구축한 **1인 prototype**은 이 가치 흐름의 **모든 구성 요소를 부분적으로** 보여줍니다 (V2X 메시지 흐름·BEV 미니맵·NRE 카메라 렌더·6 평가 탭).
-- 그러나 **연구자가 실제로 자체 로직을 inject·테스트할 수 있는 통합 환경**은 본격 PoC 단계에서 비로소 완성됩니다.
+- 작성자가 단독 구축한 **1인 prototype**은 이 가치 흐름의 **모든 구성 요소를 부분적으로** 보여줍니다 (V2X 메시지 흐름·BEV 미니맵·NRE 카메라 렌더·6 평가 탭). 본 보고서 작성 중 추가로 **미니맵+카메라 sync 통합 데모**와 **미니맵-only 1분 30초 영상**도 prototype 단계에서 확보했습니다 (§5 ⓑ).
+- 그러나 **연구자가 실제로 자체 로직을 inject·테스트할 수 있는 통합 환경**과 **긴 시나리오를 정량 sweep할 수 있는 데이터셋**은 본격 PoC 단계에서 비로소 완성됩니다.
 - 본격 PoC 추진을 위해 **개발자 2 + 기획자 1 + 디자이너 1 + 퍼블리셔 1 = 총 5명 × 3개월 (15 man-month)** 투입을 건의드립니다.
 
 ---
@@ -94,20 +94,47 @@
 - 평가위원이 시나리오를 선택·V2X 변동을 인터랙티브 조작할 수 있는 UI
 - KATECH와 공동 정의 워크샵을 통한 합의 (이 과정 자체가 평가 결과의 권위 확보)
 
-### ⓑ 미니맵 + 카메라 sync 통합 시뮬레이션 환경 ★ (본질의 핵심)
-- **BEV 미니맵(자차·주변차·V2X 신호 위치) + NRE 카메라 렌더가 같은 timestamp로 sync 재생**
+### ⓑ 미니맵 + 카메라 통합 시뮬레이션 환경 ★ (본질의 핵심)
+
+본격 PoC의 가장 중요한 산출물이며, **시연용 high-fidelity 트랙**과 **정량 평가용 light-weight 트랙**으로 이중 분기됩니다.
+
+#### ⓑ-1 High-fidelity sync 트랙 (NRE + 미니맵 sync) — 발표·정성 평가용
+- **NRE 카메라 렌더 + BEV 미니맵을 같은 timestamp로 sync 재생** (picture-in-picture 합성)
 - 연구자가 한 화면에서 "지금 차가 어디 있고, 무엇을 보고 있고, V2X가 어떤 정보를 주고, 어떻게 판단했는가"를 동시에 관찰
-- step-by-step 일시정지·되감기·시점 변경 지원
+- 비용: rollout당 NRE 합성 8-10분, 시연 효과 최대
+- 적합: KATECH 평가위원 시연, 영상 자료, 정성 검증
 
-**prototype 단계 시도 (시각 증거)**:
+**prototype 단계 시각 증거**:
 
-![미니맵+카메라 sync 통합 환경 prototype](images/sync_minimap_camera_preview.png)
+![미니맵+카메라 sync (high-fidelity)](images/sync_minimap_camera_preview.png)
 
-> 위 캡쳐는 본 보고서 작성 중 작성자가 prototype에서 시도한 **미니맵+카메라 sync PiP(picture-in-picture) 합성** 결과입니다. 우상단 BEV 미니맵에 자차(빨강 삼각형)·궤적(회색 선)·V2X 배너가 시계열로 표시되고, 카메라 뷰와 같은 step timestamp로 동시 재생됩니다.
+> 우상단 BEV 미니맵에 자차(빨강 삼각형)·궤적(회색 선)·V2X 배너가 시계열로 표시되고, 카메라 뷰와 같은 step timestamp로 동시 재생됩니다. (rollout `38e6fafa`, 14 step, 7초)
+
+#### ⓑ-2 Light-weight 미니맵-only 트랙 — 긴 시나리오·정량 sweep용
+- **NRE 카메라 합성 단계 skip, 미니맵만 단독 렌더** (ASL trace의 step 데이터만 사용)
+- 비용: rollout당 1-2분 (NRE 8-10분 대비 5-10× 단축)
+- 적합: 시나리오 카탈로그 sweep·V2X 변동 정량 평가·긴 시뮬레이션 시연
+
+**prototype 단계 시각 증거**:
+
+![미니맵-only 1분 30초 영상](images/minimap_only_98s_preview.png)
+
+> 196 step rollout(`27c047f0`)을 미니맵-only로 렌더한 결과. 영상 길이 98초(1분 38초), 1200×840 해상도, 100KB. 자차 trail이 누적되어 전체 궤적을 한눈에 확인 가능.
+
+#### ⓑ-2의 본질적 한계 — NuRec GT 추출 파이프라인이 별도로 필요
+
+> **정직한 보고**: 위 98초 미니맵 영상의 **실제 시뮬레이션 시간은 20초**입니다 (196 step × 100ms control timestep × 2fps 인코딩 → 4× slow-motion 영상). NuRec OSS scene 카탈로그가 모두 20초 고정이라 closed-loop이 그 이상 진행되지 못합니다.
 >
-> *한계*: 현재 rollout meta에 V2X 텍스트가 기록되지 않아 "(V2X 미기록)"으로 표시됨. 주변차·V2X 신호 위치도 미표시. 본격 PoC에서 ⓐ 카탈로그·rollout meta 표준화 + 미니맵 데이터 확장으로 완성 필요.
+> **진짜 1분/5분/30분짜리 연속 시뮬레이션**을 만들려면 본격 PoC에서 별도 작업이 필요합니다:
+> 1. NuRec 데이터셋에서 60초+ GT trajectory clip 추출 파이프라인 구축
+> 2. 또는 한국 도로 자체 녹화 데이터로 NuRec 데이터셋 확장 (KATECH 협업 가능)
+> 3. Alpasim wizard에 시간 한계 hydra override 노출
 >
-> 산출 스크립트: `scripts/render_minimap_camera_sync.py` · UI 노출: Tab ⑥ "▶ 미니맵 + 카메라 sync"
+> 이 작업은 **본격 PoC 산출물 ⓑ-2의 핵심 의존성**이며, 모델·시각화 작업과 병행되어야 합니다.
+
+#### ⓑ 산출물 공통
+- 산출 스크립트: `scripts/render_minimap_camera_sync.py` (`--minimap-only` 옵션으로 두 트랙 모두 지원)
+- UI 노출: Tab ⑥ "▶ 미니맵 + 카메라 sync" (high-fidelity) — light-weight 트랙은 평가용 별도 페이지 필요
 
 ### ⓒ 연구자 SDK/API
 - Python API: 시나리오 로드 → 자율주행 로직 inject → 시뮬레이션 실행 → 결과 수집
@@ -199,8 +226,8 @@
 | **기획** | 사용자 분석<br>**시나리오 카탈로그 ⓐ 가설 정의** | V2X 메시지 셋·평가 지표 정의서<br>연구자 인터뷰 → **SDK ⓒ 요구사항** | KATECH 공동 정의 워크샵<br>시나리오·지표 최종 합의 |
 | **디자인** | 정보구조도<br>와이어프레임 | 시각 디자인<br>**sync UI ⓑ 디자인**<br>**SDK 문서 ⓒ 디자인** | **대시보드 ⓓ 디자인**<br>발표 자료 |
 | **퍼블** | 디자인 시스템 적용<br>마크업 골격 | 평가 탭 퍼블<br>**sync UI ⓑ 마크업** | **SDK 문서 페이지**<br>**대시보드 ⓓ 퍼블**<br>접근성 검수 |
-| **개발 1**<br>(백엔드·모델·SDK) | Alpamayo·Cosmos 적재<br>ASL 파서, vllm | NRE 통합<br>사전 캐싱<br>**SDK ⓒ 골격** | **SDK ⓒ 완성**<br>회귀 테스트<br>운영 매뉴얼 |
-| **개발 2**<br>(프론트·sync·시스템) | FastAPI/HTMX 골격<br>6 탭 라우팅 | **sync UI ⓑ 통합**<br>인터랙티브·VQA·카메라 sweep | **대시보드 ⓓ 통합**<br>자동 캡처<br>cloudflared·부하 |
+| **개발 1**<br>(백엔드·모델·SDK·데이터) | Alpamayo·Cosmos 적재<br>ASL 파서, vllm<br>**NuRec GT 추출 파이프라인 ⓑ-2** | NRE 통합 (ⓑ-1)<br>**긴 GT scene 카탈로그 ⓑ-2**<br>사전 캐싱<br>**SDK ⓒ 골격** | **SDK ⓒ 완성**<br>회귀 테스트<br>운영 매뉴얼 |
+| **개발 2**<br>(프론트·sync·시스템) | FastAPI/HTMX 골격<br>6 탭 라우팅 | **sync UI ⓑ-1 통합**<br>**미니맵-only 페이지 ⓑ-2**<br>인터랙티브·VQA·카메라 sweep | **대시보드 ⓓ 통합**<br>자동 캡처<br>cloudflared·부하 |
 
 ### 마일스톤
 - **M1 (1개월 말)**: 기획·디자인 80% + 개발 골격 동작 (단일 탭 end-to-end)
@@ -221,7 +248,8 @@
 - KATECH 공동 정의 워크샵을 **2개월차 말**에 배치 → 3개월차에 결과 반영
 
 ### 9-3. 우선순위
-- **1순위**: 산출물 ⓑ **sync 통합 시뮬레이션 환경** — PoC 본질의 핵심
+- **1순위**: 산출물 ⓑ-1 **NRE+미니맵 sync 통합** — PoC 본질·시연 핵심
+- **1순위 병행**: 산출물 ⓑ-2 **NuRec GT 추출 파이프라인 + 미니맵-only 트랙** — 정량 sweep·긴 시나리오 시연 핵심
 - **2순위**: 산출물 ⓒ **연구자 SDK** — KATECH 연구자 직접 가치
 - **3순위**: 산출물 ⓐ **시나리오 카탈로그** — 권위 확보
 - **4순위**: 산출물 ⓓ **결과 대시보드** — 최종 검증·발표
@@ -230,6 +258,7 @@
 - **모델 stack 의존도 분리**: Alpamayo·NRE는 baseline일 뿐, SDK가 swappable이어야 함
 - **KATECH 합의 시점 확보**: 2개월차 워크샵에서 시나리오·지표 사전 합의 → 평가 결과 신뢰도
 - **차세대 모델 로드맵 동기화**: Alpamayo/Cosmos 차세대 출시 시 인터페이스 표준화로 갈아끼움 가능하게
+- **데이터셋 길이 한계**: 현재 NuRec OSS scene이 모두 20초 고정 — ⓑ-2 light-weight 트랙의 핵심 의존성. 1개월차에 GT 추출 파이프라인 착수 못 하면 3개월차 시연·정량 sweep 모두 영향. KATECH의 한국 도로 녹화 데이터 협업이 risk hedge가 될 수 있음
 
 ---
 
