@@ -9,6 +9,18 @@
 
   <form id="ts-form" hx-post="/trafficsim/start" hx-target="#ts-stage" hx-swap="innerHTML">
     <fieldset style="margin-bottom:1rem; padding:0.75rem;">
+      <legend>맵 소스</legend>
+      {% for m in map_sources %}
+      <label style="margin-right:1rem;">
+        <input type="radio" name="map_source" value="{{ m.key }}"
+               {% if loop.first %}checked{% endif %}
+               {% if not m.available %}disabled{% endif %}>
+        {{ m.name }}{% if not m.available %} <span class="muted">(파일 없음)</span>{% endif %}
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset style="margin-bottom:1rem; padding:0.75rem;">
       <legend>시나리오</legend>
       {% for s in scenarios %}
       <label style="margin-right:1rem;">

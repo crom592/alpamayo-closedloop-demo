@@ -53,7 +53,7 @@ from trafficsim.avlogic.rule_based import RuleBasedLogic  # noqa: E402
 from trafficsim.avlogic.alpamayo_proxy import AlpamayoLogic  # noqa: E402
 from trafficsim.avlogic.v2x_blind import V2XBlindLogic  # noqa: E402
 from trafficsim.engine import Sim, SimConfig, build_plotly_figure  # noqa: E402
-from trafficsim.world import load_default_map  # noqa: E402
+from trafficsim.world import load_default_map, load_opendrive_map  # noqa: E402
 from trafficsim.scenarios.base import apply_scenario as _apply_scn  # noqa: E402
 import trafficsim.scenarios  # noqa: F401, E402  — 시나리오 모듈 등록 (side-effect import)
 
@@ -105,6 +105,29 @@ TRAFFICSIM_LOGICS = [
     {"key": "alpamayo", "name": "Alpamayo VLA"},
     {"key": "v2x_blind", "name": "V2X 무시 (비교군)"},
 ]
+
+TRAFFICSIM_MAP_SOURCES = [
+    {"key": "mock", "name": "Mock 한국형 (기본)"},
+    {"key": "opendrive_e6mini", "name": "OpenDRIVE: esmini e6mini"},
+]
+
+TRAFFICSIM_OPENDRIVE_FILES = {
+    "opendrive_e6mini": HERE / "trafficsim" / "maps" / "e6mini.xodr",
+}
+
+
+def _has_opendrive(key: str) -> bool:
+    p = TRAFFICSIM_OPENDRIVE_FILES.get(key)
+    return bool(p and p.exists())
+
+
+class _NoopLogic:
+    """Logic stub used in opendrive 시각화 mode — keeps ego stationary."""
+
+    def decide(self, obs):
+        from trafficsim.avlogic.interface import Action
+        return Action(target_speed=0.0, steering=0.0, reason="opendrive 시각화 모드")
+
 
 TRAFFICSIM_RUNS: dict[str, dict] = {}
 
@@ -713,12 +736,17 @@ async def closedloop_report_file(name: str):
 
 @app.get("/tab/trafficsim", response_class=HTMLResponse)
 async def tab_trafficsim(request: Request):
+    map_sources = [
+        {**s, "available": s["key"] == "mock" or _has_opendrive(s["key"])}
+        for s in TRAFFICSIM_MAP_SOURCES
+    ]
     return TEMPLATES.TemplateResponse(
         request,
         "tab_trafficsim.html",
         {
             "scenarios": TRAFFICSIM_SCENARIOS,
             "logics": TRAFFICSIM_LOGICS,
+            "map_sources": map_sources,
         },
     )
 
@@ -728,15 +756,29 @@ async def trafficsim_start(
     request: Request,
     scenario: str = Form(...),
     logic: str = Form(...),
+    map_source: str = Form("mock"),
 ):
-    sim = Sim(SimConfig(dt=0.1), logic=_make_logic(logic), world=load_default_map())
-    _apply_scenario(sim, scenario)
+    if map_source == "mock":
+        sim = Sim(SimConfig(dt=0.1), logic=_make_logic(logic), world=load_default_map())
+        _apply_scenario(sim, scenario)
+    else:
+        xodr_path = TRAFFICSIM_OPENDRIVE_FILES.get(map_source)
+        if not xodr_path or not xodr_path.exists():
+            return HTMLResponse(
+                f'<div class="muted">맵 소스 "{map_source}" 파일을 찾을 수 없습니다.</div>',
+                status_code=200,
+            )
+        sim = Sim(SimConfig(dt=0.1), logic=_NoopLogic(), world=load_opendrive_map(xodr_path))
+        # OpenDRIVE 모드: ego를 첫 lane 시작점으로 이동, 시나리오 setup 생략
+        if sim.world and sim.world.lanes and sim.world.lanes[0].polyline:
+            sim.ego.x, sim.ego.y = sim.world.lanes[0].polyline[0]
     run_id = secrets.token_urlsafe(8)
     TRAFFICSIM_RUNS[run_id] = {
         "sim": sim,
         "paused": False,
         "scenario": scenario,
         "logic": logic,
+        "map_source": map_source,
     }
     return TEMPLATES.TemplateResponse(
         request,
