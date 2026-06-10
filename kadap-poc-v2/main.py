@@ -806,7 +806,7 @@ async def trafficsim_tick(request: Request, run_id: str):
             sim.tick()
     return TEMPLATES.TemplateResponse(
         request,
-        "_trafficsim_frame.html",
+        "_trafficsim_panel.html",
         {
             "run_id": run_id,
             "sim": sim,
@@ -831,7 +831,7 @@ async def trafficsim_control(request: Request, run_id: str, action: str):
         sim.tick()
     return TEMPLATES.TemplateResponse(
         request,
-        "_trafficsim_frame.html",
+        "_trafficsim_panel.html",
         {
             "run_id": run_id,
             "sim": sim,

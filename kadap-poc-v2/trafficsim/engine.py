@@ -143,7 +143,7 @@ class Sim:
 
 
 def build_plotly_figure(sim: "Sim") -> dict:
-    """Sim 상태 → Plotly figure JSON (top-down 2D 맵)."""
+    """Sim 상태 → Plotly figure JSON (top-down 2D 맵, light theme)."""
     data: list[dict] = []
 
     if sim.world:
@@ -154,7 +154,7 @@ def build_plotly_figure(sim: "Sim") -> dict:
                 "type": "scatter", "mode": "lines",
                 "x": xs, "y": ys,
                 "name": f"lane:{lane.id}",
-                "line": {"color": "#888", "width": 6},
+                "line": {"color": "#9aa3af", "width": 8},
                 "hoverinfo": "skip",
                 "showlegend": False,
             })
@@ -165,17 +165,20 @@ def build_plotly_figure(sim: "Sim") -> dict:
                 "type": "scatter", "mode": "lines",
                 "x": xs, "y": ys,
                 "name": f"crosswalk:{cw.id}",
-                "line": {"color": "#fff", "width": 4, "dash": "dot"},
+                "line": {"color": "#2d3748", "width": 4, "dash": "dot"},
                 "hoverinfo": "skip",
                 "showlegend": False,
             })
 
     for tl in sim.traffic_lights:
-        color = {"GREEN": "#2ecc71", "YELLOW": "#f1c40f", "RED": "#e74c3c", "OFF": "#7f8c8d"}.get(tl.phase, "#888")
+        color = {"GREEN": "#16a34a", "YELLOW": "#eab308", "RED": "#dc2626", "OFF": "#9ca3af"}.get(tl.phase, "#9ca3af")
         data.append({
             "type": "scatter", "mode": "markers",
             "x": [tl.x], "y": [tl.y],
-            "marker": {"size": 16, "color": color, "symbol": "square"},
+            "marker": {
+                "size": 18, "color": color, "symbol": "square",
+                "line": {"color": "#1c1e21", "width": 1.5},
+            },
             "name": f"SPaT {tl.id}",
             "text": [f"{tl.phase} {tl.remaining_s:.1f}s"],
             "hoverinfo": "text",
@@ -186,7 +189,10 @@ def build_plotly_figure(sim: "Sim") -> dict:
             "type": "scatter", "mode": "markers",
             "x": [p.x for p in sim.pedestrians],
             "y": [p.y for p in sim.pedestrians],
-            "marker": {"size": 10, "color": "#3498db", "symbol": "circle"},
+            "marker": {
+                "size": 13, "color": "#2563eb", "symbol": "circle",
+                "line": {"color": "#1c1e21", "width": 1},
+            },
             "name": "보행자 (PSM)",
         })
 
@@ -195,14 +201,20 @@ def build_plotly_figure(sim: "Sim") -> dict:
             "type": "scatter", "mode": "markers",
             "x": [v.x for v in sim.vehicles],
             "y": [v.y for v in sim.vehicles],
-            "marker": {"size": 14, "color": "#e67e22", "symbol": "triangle-up"},
+            "marker": {
+                "size": 16, "color": "#d97706", "symbol": "triangle-up",
+                "line": {"color": "#1c1e21", "width": 1},
+            },
             "name": "주변차 (BSM)",
         })
 
     data.append({
         "type": "scatter", "mode": "markers",
         "x": [sim.ego.x], "y": [sim.ego.y],
-        "marker": {"size": 20, "color": "#c0392b", "symbol": "star"},
+        "marker": {
+            "size": 24, "color": "#003366", "symbol": "star",
+            "line": {"color": "#ffffff", "width": 2},
+        },
         "name": "자차",
     })
 
@@ -218,14 +230,24 @@ def build_plotly_figure(sim: "Sim") -> dict:
             x_range = [min(xs) - VIEWPORT_MARGIN, max(xs) + VIEWPORT_MARGIN]
             y_range = [min(ys) - VIEWPORT_MARGIN, max(ys) + VIEWPORT_MARGIN]
 
+    axis_common = {
+        "showgrid": True, "gridcolor": "#e5e7eb", "zerolinecolor": "#d1d5db",
+        "tickcolor": "#9ca3af", "tickfont": {"size": 11},
+    }
     layout = {
-        "xaxis": {"range": x_range, "title": "x (m)", "scaleanchor": "y", "scaleratio": 1},
-        "yaxis": {"range": y_range, "title": "y (m)"},
-        "margin": {"l": 50, "r": 10, "t": 10, "b": 40},
+        "xaxis": {**axis_common, "range": x_range, "title": "x (m)", "scaleanchor": "y", "scaleratio": 1},
+        "yaxis": {**axis_common, "range": y_range, "title": "y (m)"},
+        "margin": {"l": 55, "r": 16, "t": 16, "b": 48},
         "showlegend": True,
-        "legend": {"orientation": "h", "y": -0.15},
-        "paper_bgcolor": "#222",
-        "plot_bgcolor": "#1a1a1a",
-        "font": {"color": "#eee"},
+        "legend": {
+            "orientation": "h", "y": -0.12, "x": 0,
+            "bgcolor": "rgba(255,255,255,0.85)",
+            "bordercolor": "#e5e7eb", "borderwidth": 1,
+            "font": {"size": 12},
+        },
+        "paper_bgcolor": "#ffffff",
+        "plot_bgcolor": "#fafbfc",
+        "font": {"color": "#1c1e21", "family": "Noto Sans KR, system-ui, sans-serif"},
+        "transition": {"duration": 0},
     }
     return {"data": data, "layout": layout}

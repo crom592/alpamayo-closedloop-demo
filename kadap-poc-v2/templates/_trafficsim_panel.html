@@ -1,10 +1,5 @@
-<div class="ts-grid">
-  <div id="ts-plot" class="ts-plot"></div>
-  <aside id="ts-panel" class="ts-panel">
-    {% include "_trafficsim_panel_body.html" %}
-  </aside>
-</div>
-<div id="ts-poller" aria-hidden="true" style="display:none;"
+{% include "_trafficsim_panel_body.html" %}
+<div id="ts-poller" hx-swap-oob="outerHTML" aria-hidden="true" style="display:none;"
      {% if not paused %}hx-get="/trafficsim/tick?run_id={{ run_id }}"
      hx-trigger="load delay:300ms"
      hx-target="#ts-panel"

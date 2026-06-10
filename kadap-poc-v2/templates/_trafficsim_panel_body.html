@@ -1,0 +1,29 @@
+<div class="ts-stats">
+  <div class="ts-stat">
+    <div class="ts-stat-label">tick</div>
+    <div class="ts-stat-value">{{ sim.tick_count }}<span class="ts-stat-unit"> · {{ "%.1f"|format(sim.t) }}s</span></div>
+  </div>
+  <div class="ts-stat">
+    <div class="ts-stat-label">자차 속도</div>
+    <div class="ts-stat-value">{{ "%.2f"|format(sim.ego.speed) }}<span class="ts-stat-unit"> m/s</span></div>
+  </div>
+  <div class="ts-stat">
+    <div class="ts-stat-label">자차 위치</div>
+    <div class="ts-stat-value">({{ "%.0f"|format(sim.ego.x) }}, {{ "%.0f"|format(sim.ego.y) }})</div>
+  </div>
+</div>
+<div class="ts-reason">
+  <div class="ts-reason-label">로직 판단</div>
+  <div class="ts-reason-text">{{ sim.last_reason or "—" }}</div>
+</div>
+<div class="ts-controls">
+  <button hx-post="/trafficsim/control?run_id={{ run_id }}&action=toggle_pause"
+          hx-target="#ts-panel" hx-swap="innerHTML"
+          class="btn btn-primary">{% if paused %}▶ 재개{% else %}⏸ 일시정지{% endif %}</button>
+  <button hx-post="/trafficsim/control?run_id={{ run_id }}&action=step"
+          hx-target="#ts-panel" hx-swap="innerHTML"
+          class="btn btn-secondary"{% if not paused %} disabled{% endif %}>⏭ 1 step</button>
+  <button hx-post="/trafficsim/reset?run_id={{ run_id }}"
+          hx-target="#ts-stage" hx-swap="innerHTML"
+          class="btn btn-ghost">⟲ 리셋</button>
+</div>
