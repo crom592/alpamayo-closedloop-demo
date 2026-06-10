@@ -206,9 +206,21 @@ def build_plotly_figure(sim: "Sim") -> dict:
         "name": "자차",
     })
 
+    # Dynamic viewport: fit lane polylines + 20m margin, fall back to mock-map defaults
+    VIEWPORT_MARGIN = 20.0
+    x_range = [-50, 250]
+    y_range = [-30, 100]
+    if sim.world and sim.world.lanes:
+        all_pts = [pt for lane in sim.world.lanes for pt in lane.polyline]
+        if all_pts:
+            xs = [p[0] for p in all_pts]
+            ys = [p[1] for p in all_pts]
+            x_range = [min(xs) - VIEWPORT_MARGIN, max(xs) + VIEWPORT_MARGIN]
+            y_range = [min(ys) - VIEWPORT_MARGIN, max(ys) + VIEWPORT_MARGIN]
+
     layout = {
-        "xaxis": {"range": [-50, 250], "title": "x (m)", "scaleanchor": "y", "scaleratio": 1},
-        "yaxis": {"range": [-30, 100], "title": "y (m)"},
+        "xaxis": {"range": x_range, "title": "x (m)", "scaleanchor": "y", "scaleratio": 1},
+        "yaxis": {"range": y_range, "title": "y (m)"},
         "margin": {"l": 50, "r": 10, "t": 10, "b": 40},
         "showlegend": True,
         "legend": {"orientation": "h", "y": -0.15},
