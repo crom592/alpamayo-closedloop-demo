@@ -139,6 +139,35 @@ def _build_road_polyline(road_el: ET.Element) -> list[tuple[float, float]]:
     return pts
 
 
+def _parse_crosswalk_objects(road_el: ET.Element) -> list[dict]:
+    out = []
+    for obj in road_el.findall("./objects/object"):
+        if (obj.get("type") or "").lower() != "crosswalk":
+            continue
+        out.append({
+            "id": obj.get("id", ""),
+            "type": "crosswalk",
+            "s": float(obj.get("s", "0")),
+            "t": float(obj.get("t", "0")),
+            "length": float(obj.get("length", "0")),
+            "width": float(obj.get("width", "0")),
+            "hdg": float(obj.get("hdg", "0")),
+        })
+    return out
+
+
+def _parse_junction_el(j_el: ET.Element) -> dict:
+    connections = []
+    for c in j_el.findall("./connection"):
+        connections.append({
+            "id": c.get("id", ""),
+            "incomingRoad": c.get("incomingRoad", ""),
+            "connectingRoad": c.get("connectingRoad", ""),
+            "contactPoint": c.get("contactPoint", "start"),
+        })
+    return {"id": j_el.get("id", ""), "connections": connections}
+
+
 def parse_xodr(xml_str: str) -> dict:
     """Parse OpenDRIVE XML string into our internal IR dict.
 
@@ -147,10 +176,18 @@ def parse_xodr(xml_str: str) -> dict:
         "roads": [
             {"id": str, "length": float, "junction": str,
              "speed_max_mps": float, "polyline": [(x, y), ...],
-             "objects": [...]},
+             "objects": [{"id": str, "type": "crosswalk",
+                          "s": float, "t": float, "length": float,
+                          "width": float, "hdg": float}, ...]},
             ...
         ],
-        "junctions": [{"id": str, "connections": [...]}, ...],
+        "junctions": [
+            {"id": str, "connections": [
+                {"id": str, "incomingRoad": str, "connectingRoad": str,
+                 "contactPoint": "start"|"end"}, ...
+            ]},
+            ...
+        ],
       }
     """
     root = ET.fromstring(xml_str)
@@ -162,7 +199,7 @@ def parse_xodr(xml_str: str) -> dict:
             "junction": road_el.get("junction", "-1"),
             "speed_max_mps": _parse_speed_mps(road_el),
             "polyline": _build_road_polyline(road_el),
-            "objects": [],  # populated in T3
+            "objects": _parse_crosswalk_objects(road_el),
         })
-    junctions = []  # populated in T3
+    junctions = [_parse_junction_el(j) for j in root.findall("./junction")]
     return {"roads": roads, "junctions": junctions}
