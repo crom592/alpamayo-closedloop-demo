@@ -85,6 +85,19 @@ V2X_PRESETS = [
 ]
 
 
+# Traffic-sim tab (🗺 능동 traffic sim) — scenario + logic options.
+TRAFFICSIM_SCENARIOS = [
+    {"key": "scen_01", "name": "① 보호좌회전 + 횡단보도 보행자"},
+    {"key": "scen_02", "name": "② 신호등 고장 + RSU 우회 안내"},
+    {"key": "scen_03", "name": "③ 골목 합류 + 사각지대 BSM"},
+]
+TRAFFICSIM_LOGICS = [
+    {"key": "rule_based", "name": "RuleBased (V2X 우선순위)"},
+    {"key": "alpamayo", "name": "Alpamayo VLA"},
+    {"key": "v2x_blind", "name": "V2X 무시 (비교군)"},
+]
+
+
 # ---------------------------------------------------------------------------
 # Shared helpers
 # ---------------------------------------------------------------------------
@@ -666,6 +679,23 @@ async def closedloop_report_file(name: str):
     if not p.exists():
         return HTMLResponse("not found", status_code=404)
     return FileResponse(str(p), media_type="application/pdf", filename=name)
+
+
+# ---------------------------------------------------------------------------
+# Tab 🗺 능동 traffic sim — scenario + AV logic selector
+# ---------------------------------------------------------------------------
+
+
+@app.get("/tab/trafficsim", response_class=HTMLResponse)
+async def tab_trafficsim(request: Request):
+    return TEMPLATES.TemplateResponse(
+        request,
+        "tab_trafficsim.html",
+        {
+            "scenarios": TRAFFICSIM_SCENARIOS,
+            "logics": TRAFFICSIM_LOGICS,
+        },
+    )
 
 
 # ---------------------------------------------------------------------------

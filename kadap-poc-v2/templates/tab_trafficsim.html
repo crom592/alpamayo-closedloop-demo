@@ -1,0 +1,37 @@
+<section class="card">
+  <h2>🗺 능동 traffic sim</h2>
+  <p class="muted">
+    V2X 인프라(신호등·RSU·보행자·주변차)가 포함된 시뮬레이션 환경에서
+    자율주행 로직(swappable)을 테스트합니다.
+  </p>
+
+  <form id="ts-form" hx-post="/trafficsim/start" hx-target="#ts-stage" hx-swap="innerHTML">
+    <fieldset style="margin-bottom:1rem; padding:0.75rem;">
+      <legend>시나리오</legend>
+      {% for s in scenarios %}
+      <label style="margin-right:1rem;">
+        <input type="radio" name="scenario" value="{{ s.key }}"
+               {% if loop.first %}checked{% endif %}>
+        {{ s.name }}
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <fieldset style="margin-bottom:1rem; padding:0.75rem;">
+      <legend>자율주행 로직</legend>
+      {% for l in logics %}
+      <label style="margin-right:1rem;">
+        <input type="radio" name="logic" value="{{ l.key }}"
+               {% if loop.first %}checked{% endif %}>
+        {{ l.name }}
+      </label>
+      {% endfor %}
+    </fieldset>
+
+    <button type="submit" class="btn btn-primary">▶ 시작</button>
+  </form>
+
+  <div id="ts-stage" style="margin-top:1.5rem;">
+    <div class="muted">시나리오·로직을 선택하고 ▶ 시작을 누르세요.</div>
+  </div>
+</section>
