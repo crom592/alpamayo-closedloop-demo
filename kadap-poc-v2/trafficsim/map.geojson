@@ -1,0 +1,51 @@
+{
+  "type": "FeatureCollection",
+  "name": "kadap-trafficsim-default",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {"kind": "lane", "id": "L_west_east_in", "speed_limit": 13.8},
+      "geometry": {"type": "LineString", "coordinates": [[-100.0, 0.0], [0.0, 0.0]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "lane", "id": "L_west_east_out", "speed_limit": 13.8},
+      "geometry": {"type": "LineString", "coordinates": [[0.0, 0.0], [100.0, 0.0]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "lane", "id": "L_east_inter2_in", "speed_limit": 13.8},
+      "geometry": {"type": "LineString", "coordinates": [[100.0, 0.0], [200.0, 0.0]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "lane", "id": "L_north_south_in", "speed_limit": 13.8},
+      "geometry": {"type": "LineString", "coordinates": [[0.0, 80.0], [0.0, 0.0]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "lane", "id": "L_alley_merge", "speed_limit": 8.0},
+      "geometry": {"type": "LineString", "coordinates": [[60.0, 30.0], [60.0, 0.0]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "intersection", "id": "X_main"},
+      "geometry": {"type": "Point", "coordinates": [0.0, 0.0]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "intersection", "id": "X_east"},
+      "geometry": {"type": "Point", "coordinates": [100.0, 0.0]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "crosswalk", "id": "CW_main_north", "axis": "y"},
+      "geometry": {"type": "LineString", "coordinates": [[-4.0, 4.0], [4.0, 4.0]]}
+    },
+    {
+      "type": "Feature",
+      "properties": {"kind": "crosswalk", "id": "CW_east_north", "axis": "y"},
+      "geometry": {"type": "LineString", "coordinates": [[96.0, 4.0], [104.0, 4.0]]}
+    }
+  ]
+}
