@@ -768,6 +768,40 @@ async def trafficsim_tick(request: Request, run_id: str):
     )
 
 
+@app.post("/trafficsim/control", response_class=HTMLResponse)
+async def trafficsim_control(request: Request, run_id: str, action: str):
+    state = TRAFFICSIM_RUNS.get(run_id)
+    if not state:
+        return HTMLResponse(
+            '<div class="muted">세션 만료 — 다시 시작하세요.</div>',
+            status_code=200,
+        )
+    sim: Sim = state["sim"]
+    if action == "toggle_pause":
+        state["paused"] = not state["paused"]
+    elif action == "step":
+        sim.tick()
+    return TEMPLATES.TemplateResponse(
+        request,
+        "_trafficsim_frame.html",
+        {
+            "run_id": run_id,
+            "sim": sim,
+            "figure": build_plotly_figure(sim),
+            "paused": state["paused"],
+        },
+    )
+
+
+@app.post("/trafficsim/reset", response_class=HTMLResponse)
+async def trafficsim_reset(request: Request, run_id: str):
+    TRAFFICSIM_RUNS.pop(run_id, None)
+    return HTMLResponse(
+        '<div class="muted">리셋됨. 시나리오·로직을 다시 선택하세요.</div>',
+        status_code=200,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Tab ⓘ 시스템 — docker/gpu 상태 + 카탈로그 + 시스템 구성 정적 정보
 # ---------------------------------------------------------------------------
