@@ -33,3 +33,15 @@ def test_scen_01_traffic_light_starts_green_with_5s_remaining():
     sim.traffic_lights[0].update(t=0.0)
     assert sim.traffic_lights[0].phase == "GREEN"
     assert abs(sim.traffic_lights[0].remaining_s - 5.0) < 0.01
+
+
+def test_scen_02_registered():
+    assert "scen_02" in SCENARIOS
+
+
+def test_scen_02_has_broken_light_and_tim():
+    sim = _fresh_sim()
+    apply_scenario(sim, "scen_02")
+    sim.tick()
+    assert any(tl.broken for tl in sim.traffic_lights)
+    assert any(m.kind == "TIM" for m in sim.injected_msgs)
