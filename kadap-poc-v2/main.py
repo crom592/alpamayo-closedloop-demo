@@ -52,6 +52,8 @@ import vlm_qa  # noqa: E402
 from trafficsim.avlogic.rule_based import RuleBasedLogic  # noqa: E402
 from trafficsim.engine import Sim, SimConfig, build_plotly_figure  # noqa: E402
 from trafficsim.world import load_default_map  # noqa: E402
+from trafficsim.scenarios.base import apply_scenario as _apply_scn  # noqa: E402
+import trafficsim.scenarios  # noqa: F401, E402  — 시나리오 모듈 등록 (side-effect import)
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
@@ -113,8 +115,7 @@ def _make_logic(key: str):
 
 
 def _apply_scenario(sim: Sim, key: str) -> None:
-    # Task 13-15에서 시나리오별 setup 추가
-    pass
+    _apply_scn(sim, key)
 
 
 # ---------------------------------------------------------------------------
