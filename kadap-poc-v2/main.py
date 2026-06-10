@@ -50,6 +50,7 @@ from runner import (  # noqa: E402
 import vlm_qa  # noqa: E402
 
 from trafficsim.avlogic.rule_based import RuleBasedLogic  # noqa: E402
+from trafficsim.avlogic.alpamayo_proxy import AlpamayoLogic  # noqa: E402
 from trafficsim.engine import Sim, SimConfig, build_plotly_figure  # noqa: E402
 from trafficsim.world import load_default_map  # noqa: E402
 from trafficsim.scenarios.base import apply_scenario as _apply_scn  # noqa: E402
@@ -110,7 +111,9 @@ TRAFFICSIM_RUNS: dict[str, dict] = {}
 def _make_logic(key: str):
     if key == "rule_based":
         return RuleBasedLogic()
-    # Task 16, 17에서 alpamayo / v2x_blind 추가
+    if key == "alpamayo":
+        return AlpamayoLogic()
+    # Task 17에서 v2x_blind 추가
     return RuleBasedLogic()
 
 
