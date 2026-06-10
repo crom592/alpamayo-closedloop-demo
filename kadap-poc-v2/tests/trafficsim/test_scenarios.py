@@ -45,3 +45,15 @@ def test_scen_02_has_broken_light_and_tim():
     sim.tick()
     assert any(tl.broken for tl in sim.traffic_lights)
     assert any(m.kind == "TIM" for m in sim.injected_msgs)
+
+
+def test_scen_03_registered():
+    assert "scen_03" in SCENARIOS
+
+
+def test_scen_03_has_blind_side_vehicle_in_alley():
+    sim = _fresh_sim()
+    apply_scenario(sim, "scen_03")
+    assert len(sim.vehicles) >= 1
+    v = sim.vehicles[0]
+    assert v.y > 5.0
