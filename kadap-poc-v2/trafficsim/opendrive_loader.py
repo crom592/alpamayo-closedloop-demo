@@ -74,3 +74,95 @@ def _sample_geometry(geom: dict) -> list[tuple[float, float]]:
             geom["curv_start"], geom["curv_end"],
         )
     raise ValueError(f"unknown geometry type: {gtype}")
+
+
+import xml.etree.ElementTree as ET
+
+DEFAULT_SPEED_MPS = 13.8  # ~50 km/h
+_MPH_TO_MPS = 0.44704
+_KMH_TO_MPS = 1.0 / 3.6
+
+
+def _parse_speed_mps(road_el: ET.Element) -> float:
+    """Extract max speed in m/s from <type><speed max=... unit=.../></type>. Default 13.8 m/s."""
+    speed_el = road_el.find("./type/speed")
+    if speed_el is None:
+        return DEFAULT_SPEED_MPS
+    try:
+        val = float(speed_el.get("max", "0"))
+    except (TypeError, ValueError):
+        return DEFAULT_SPEED_MPS
+    unit = (speed_el.get("unit") or "m/s").lower()
+    if unit == "km/h":
+        return val * _KMH_TO_MPS
+    if unit == "mph":
+        return val * _MPH_TO_MPS
+    return val  # assume m/s
+
+
+def _parse_geometry_el(geom_el: ET.Element) -> dict:
+    """Convert one <geometry> element to the dict shape expected by _sample_geometry."""
+    base = {
+        "s": float(geom_el.get("s", "0")),
+        "x": float(geom_el.get("x", "0")),
+        "y": float(geom_el.get("y", "0")),
+        "hdg": float(geom_el.get("hdg", "0")),
+        "length": float(geom_el.get("length", "0")),
+    }
+    if geom_el.find("line") is not None:
+        base["type"] = "line"
+        return base
+    arc = geom_el.find("arc")
+    if arc is not None:
+        base["type"] = "arc"
+        base["curvature"] = float(arc.get("curvature", "0"))
+        return base
+    spiral = geom_el.find("spiral")
+    if spiral is not None:
+        base["type"] = "spiral"
+        base["curv_start"] = float(spiral.get("curvStart", "0"))
+        base["curv_end"] = float(spiral.get("curvEnd", "0"))
+        return base
+    # Unsupported (paramPoly3 etc.) — treat as line for polyline continuity
+    base["type"] = "line"
+    return base
+
+
+def _build_road_polyline(road_el: ET.Element) -> list[tuple[float, float]]:
+    pts: list[tuple[float, float]] = []
+    for geom_el in road_el.findall("./planView/geometry"):
+        seg = _sample_geometry(_parse_geometry_el(geom_el))
+        if not pts:
+            pts.extend(seg)
+        else:
+            pts.extend(seg[1:])  # avoid duplicating shared endpoint
+    return pts
+
+
+def parse_xodr(xml_str: str) -> dict:
+    """Parse OpenDRIVE XML string into our internal IR dict.
+
+    Returns:
+      {
+        "roads": [
+            {"id": str, "length": float, "junction": str,
+             "speed_max_mps": float, "polyline": [(x, y), ...],
+             "objects": [...]},
+            ...
+        ],
+        "junctions": [{"id": str, "connections": [...]}, ...],
+      }
+    """
+    root = ET.fromstring(xml_str)
+    roads = []
+    for road_el in root.findall("./road"):
+        roads.append({
+            "id": road_el.get("id", ""),
+            "length": float(road_el.get("length", "0")),
+            "junction": road_el.get("junction", "-1"),
+            "speed_max_mps": _parse_speed_mps(road_el),
+            "polyline": _build_road_polyline(road_el),
+            "objects": [],  # populated in T3
+        })
+    junctions = []  # populated in T3
+    return {"roads": roads, "junctions": junctions}
