@@ -18,13 +18,14 @@ import asyncio
 import io
 import json
 import os
+import secrets
 import subprocess
 import sys
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Form, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -47,6 +48,10 @@ from runner import (  # noqa: E402
 )
 
 import vlm_qa  # noqa: E402
+
+from trafficsim.avlogic.rule_based import RuleBasedLogic  # noqa: E402
+from trafficsim.engine import Sim, SimConfig, build_plotly_figure  # noqa: E402
+from trafficsim.world import load_default_map  # noqa: E402
 
 HERE = Path(__file__).resolve().parent
 TEMPLATES = Jinja2Templates(directory=str(HERE / "templates"))
@@ -96,6 +101,20 @@ TRAFFICSIM_LOGICS = [
     {"key": "alpamayo", "name": "Alpamayo VLA"},
     {"key": "v2x_blind", "name": "V2X 무시 (비교군)"},
 ]
+
+TRAFFICSIM_RUNS: dict[str, dict] = {}
+
+
+def _make_logic(key: str):
+    if key == "rule_based":
+        return RuleBasedLogic()
+    # Task 16, 17에서 alpamayo / v2x_blind 추가
+    return RuleBasedLogic()
+
+
+def _apply_scenario(sim: Sim, key: str) -> None:
+    # Task 13-15에서 시나리오별 setup 추가
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -694,6 +713,57 @@ async def tab_trafficsim(request: Request):
         {
             "scenarios": TRAFFICSIM_SCENARIOS,
             "logics": TRAFFICSIM_LOGICS,
+        },
+    )
+
+
+@app.post("/trafficsim/start", response_class=HTMLResponse)
+async def trafficsim_start(
+    request: Request,
+    scenario: str = Form(...),
+    logic: str = Form(...),
+):
+    sim = Sim(SimConfig(dt=0.1), logic=_make_logic(logic), world=load_default_map())
+    _apply_scenario(sim, scenario)
+    run_id = secrets.token_urlsafe(8)
+    TRAFFICSIM_RUNS[run_id] = {
+        "sim": sim,
+        "paused": False,
+        "scenario": scenario,
+        "logic": logic,
+    }
+    return TEMPLATES.TemplateResponse(
+        request,
+        "_trafficsim_frame.html",
+        {
+            "run_id": run_id,
+            "sim": sim,
+            "figure": build_plotly_figure(sim),
+            "paused": False,
+        },
+    )
+
+
+@app.get("/trafficsim/tick", response_class=HTMLResponse)
+async def trafficsim_tick(request: Request, run_id: str):
+    state = TRAFFICSIM_RUNS.get(run_id)
+    if not state:
+        return HTMLResponse(
+            '<div class="muted">세션 만료 — 다시 시작하세요.</div>',
+            status_code=200,
+        )
+    sim: Sim = state["sim"]
+    if not state["paused"]:
+        for _ in range(2):
+            sim.tick()
+    return TEMPLATES.TemplateResponse(
+        request,
+        "_trafficsim_frame.html",
+        {
+            "run_id": run_id,
+            "sim": sim,
+            "figure": build_plotly_figure(sim),
+            "paused": state["paused"],
         },
     )
 

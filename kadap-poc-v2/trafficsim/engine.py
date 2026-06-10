@@ -140,3 +140,80 @@ class Sim:
         self.last_reason = action.reason
         self.t += self.cfg.dt
         self.tick_count += 1
+
+
+def build_plotly_figure(sim: "Sim") -> dict:
+    """Sim 상태 → Plotly figure JSON (top-down 2D 맵)."""
+    data: list[dict] = []
+
+    if sim.world:
+        for lane in sim.world.lanes:
+            xs = [pt[0] for pt in lane.polyline]
+            ys = [pt[1] for pt in lane.polyline]
+            data.append({
+                "type": "scatter", "mode": "lines",
+                "x": xs, "y": ys,
+                "name": f"lane:{lane.id}",
+                "line": {"color": "#888", "width": 6},
+                "hoverinfo": "skip",
+                "showlegend": False,
+            })
+        for cw in sim.world.crosswalks:
+            xs = [pt[0] for pt in cw.polyline]
+            ys = [pt[1] for pt in cw.polyline]
+            data.append({
+                "type": "scatter", "mode": "lines",
+                "x": xs, "y": ys,
+                "name": f"crosswalk:{cw.id}",
+                "line": {"color": "#fff", "width": 4, "dash": "dot"},
+                "hoverinfo": "skip",
+                "showlegend": False,
+            })
+
+    for tl in sim.traffic_lights:
+        color = {"GREEN": "#2ecc71", "YELLOW": "#f1c40f", "RED": "#e74c3c", "OFF": "#7f8c8d"}.get(tl.phase, "#888")
+        data.append({
+            "type": "scatter", "mode": "markers",
+            "x": [tl.x], "y": [tl.y],
+            "marker": {"size": 16, "color": color, "symbol": "square"},
+            "name": f"SPaT {tl.id}",
+            "text": [f"{tl.phase} {tl.remaining_s:.1f}s"],
+            "hoverinfo": "text",
+        })
+
+    if sim.pedestrians:
+        data.append({
+            "type": "scatter", "mode": "markers",
+            "x": [p.x for p in sim.pedestrians],
+            "y": [p.y for p in sim.pedestrians],
+            "marker": {"size": 10, "color": "#3498db", "symbol": "circle"},
+            "name": "보행자 (PSM)",
+        })
+
+    if sim.vehicles:
+        data.append({
+            "type": "scatter", "mode": "markers",
+            "x": [v.x for v in sim.vehicles],
+            "y": [v.y for v in sim.vehicles],
+            "marker": {"size": 14, "color": "#e67e22", "symbol": "triangle-up"},
+            "name": "주변차 (BSM)",
+        })
+
+    data.append({
+        "type": "scatter", "mode": "markers",
+        "x": [sim.ego.x], "y": [sim.ego.y],
+        "marker": {"size": 20, "color": "#c0392b", "symbol": "star"},
+        "name": "자차",
+    })
+
+    layout = {
+        "xaxis": {"range": [-50, 250], "title": "x (m)", "scaleanchor": "y", "scaleratio": 1},
+        "yaxis": {"range": [-30, 100], "title": "y (m)"},
+        "margin": {"l": 50, "r": 10, "t": 10, "b": 40},
+        "showlegend": True,
+        "legend": {"orientation": "h", "y": -0.15},
+        "paper_bgcolor": "#222",
+        "plot_bgcolor": "#1a1a1a",
+        "font": {"color": "#eee"},
+    }
+    return {"data": data, "layout": layout}

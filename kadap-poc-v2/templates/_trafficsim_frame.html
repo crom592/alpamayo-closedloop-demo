@@ -1,0 +1,35 @@
+<div id="ts-frame"
+     hx-get="/trafficsim/tick?run_id={{ run_id }}"
+     hx-trigger="load delay:200ms"
+     hx-target="#ts-frame"
+     hx-swap="outerHTML">
+  <div style="display:grid; grid-template-columns:2fr 1fr; gap:1rem;">
+    <div id="ts-plot-{{ run_id }}" style="height:520px;"></div>
+    <div>
+      <h3 style="margin-top:0;">tick {{ sim.tick_count }} · t={{ "%.1f"|format(sim.t) }}s</h3>
+      <table class="step-meta" style="width:100%;">
+        <tr><th>자차 속도</th><td>{{ "%.2f"|format(sim.ego.speed) }} m/s</td></tr>
+        <tr><th>자차 위치</th><td>({{ "%.1f"|format(sim.ego.x) }}, {{ "%.1f"|format(sim.ego.y) }})</td></tr>
+        <tr><th>로직 판단</th><td>{{ sim.last_reason or "—" }}</td></tr>
+      </table>
+      <div style="margin-top:1rem;">
+        <button hx-post="/trafficsim/control?run_id={{ run_id }}&action=toggle_pause"
+                hx-target="#ts-frame" hx-swap="outerHTML"
+                class="btn">{% if paused %}▶ 재개{% else %}⏸ 일시정지{% endif %}</button>
+        <button hx-post="/trafficsim/control?run_id={{ run_id }}&action=step"
+                hx-target="#ts-frame" hx-swap="outerHTML"
+                class="btn" {% if not paused %}disabled{% endif %}>⏭ 1 step</button>
+        <button hx-post="/trafficsim/reset?run_id={{ run_id }}"
+                hx-target="#ts-stage" hx-swap="innerHTML"
+                class="btn">⟲ 리셋</button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+  (function() {
+    var fig = {{ figure|tojson }};
+    var el = document.getElementById('ts-plot-{{ run_id }}');
+    if (el && window.Plotly) Plotly.react(el, fig.data, fig.layout, {responsive: true, displayModeBar: false});
+  })();
+</script>

@@ -43,3 +43,19 @@ def test_sim_invokes_logic_each_tick():
     assert len(calls) == 3
     assert math.isclose(calls[0], 0.0, abs_tol=1e-9)
     assert math.isclose(calls[2], 0.2, abs_tol=1e-9)
+
+
+def test_build_plotly_figure_shape():
+    from trafficsim.engine import Sim, SimConfig, build_plotly_figure
+    from trafficsim.world import load_default_map
+    from trafficsim.avlogic.interface import Action
+
+    class _Noop:
+        def decide(self, obs):
+            return Action(target_speed=0.0, steering=0.0, reason="noop")
+
+    sim = Sim(SimConfig(), logic=_Noop(), world=load_default_map())
+    fig = build_plotly_figure(sim)
+    assert "data" in fig
+    assert "layout" in fig
+    assert any(tr.get("name", "").startswith("lane") for tr in fig["data"])
