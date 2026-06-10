@@ -32,7 +32,7 @@ MAX_ACCEL = 3.0
 MAX_DECEL = 4.0
 YAW_RATE_GAIN = 1.0
 PERCEPTION_RANGE = 100.0
-PERCEPTION_HALF_FOV = math.pi / 2
+PERCEPTION_HALF_FOV = math.pi / 4  # ±45° (forward 90° cone)
 
 
 @dataclass

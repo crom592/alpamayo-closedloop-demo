@@ -1,6 +1,6 @@
 <div id="ts-frame"
      hx-get="/trafficsim/tick?run_id={{ run_id }}"
-     hx-trigger="load delay:200ms"
+     {% if not paused %}hx-trigger="load delay:200ms"{% endif %}
      hx-target="#ts-frame"
      hx-swap="outerHTML">
   <div style="display:grid; grid-template-columns:2fr 1fr; gap:1rem;">

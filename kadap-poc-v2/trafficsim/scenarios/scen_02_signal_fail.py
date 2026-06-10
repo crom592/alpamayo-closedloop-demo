@@ -29,7 +29,7 @@ def setup(sim: Sim) -> None:
             severity="HIGH",
             x=100.0,
             y=0.0,
-            rx_time=0.0,
+            rx_time=4.0,
         )
     )
     sim.inject_message(
@@ -37,6 +37,6 @@ def setup(sim: Sim) -> None:
             source_id="rsu_east",
             message="DETOUR",
             severity="HIGH",
-            rx_time=0.0,
+            rx_time=4.0,
         )
     )
