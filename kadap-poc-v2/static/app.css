@@ -373,9 +373,11 @@ pre code { display: block; padding: 0.5rem; background: var(--code-bg); border-r
   grid-template-columns: minmax(0, 2fr) minmax(260px, 1fr);
   gap: 1.25rem;
   align-items: start;
+  contain: layout style;
 }
 @media (max-width: 900px) {
   .ts-grid { grid-template-columns: 1fr; }
+  .ts-panel { height: auto !important; max-height: none !important; }
 }
 
 .ts-plot {
@@ -386,6 +388,7 @@ pre code { display: block; padding: 0.5rem; background: var(--code-bg); border-r
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
   overflow: hidden;
   min-width: 0;
+  contain: strict;
 }
 
 .ts-panel {
@@ -397,6 +400,9 @@ pre code { display: block; padding: 0.5rem; background: var(--code-bg); border-r
   border-radius: 10px;
   padding: 1rem;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+  height: 540px;
+  overflow-y: auto;
+  contain: layout style;
 }
 
 .ts-stats {
@@ -425,6 +431,9 @@ pre code { display: block; padding: 0.5rem; background: var(--code-bg); border-r
   font-weight: 600;
   color: var(--fg);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .ts-stat-unit {
   font-size: 0.78rem;
