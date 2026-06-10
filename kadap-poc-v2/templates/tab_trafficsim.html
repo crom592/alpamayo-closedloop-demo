@@ -1,9 +1,11 @@
 <section class="card">
   <h2>🗺 능동 traffic sim</h2>
-  <p class="muted">
-    V2X 인프라(신호등·RSU·보행자·주변차)가 포함된 시뮬레이션 환경에서
-    자율주행 로직(swappable)을 테스트합니다.
-  </p>
+  <div class="muted" style="background:#1e2a3a; padding:0.75rem; border-left:3px solid #3498db; margin-bottom:1rem;">
+    <strong>What's here:</strong> V2X (신호등·RSU·보행자·주변차) 메시지가 흐르는
+    시뮬레이션 환경 + 자율주행 로직 3개(RuleBased / Alpamayo mock / V2X-blind).
+    같은 시나리오에서 로직을 바꿔보며 정성 비교하세요. (Alpamayo live 호출은 카메라
+    sync 후속 작업.)
+  </div>
 
   <form id="ts-form" hx-post="/trafficsim/start" hx-target="#ts-stage" hx-swap="innerHTML">
     <fieldset style="margin-bottom:1rem; padding:0.75rem;">

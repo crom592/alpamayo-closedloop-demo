@@ -1,4 +1,6 @@
 from trafficsim.avlogic.rule_based import RuleBasedLogic
+from trafficsim.avlogic.alpamayo_proxy import AlpamayoLogic
+from trafficsim.avlogic.v2x_blind import V2XBlindLogic
 from trafficsim.engine import Sim, SimConfig
 from trafficsim.scenarios.base import SCENARIOS, apply_scenario
 from trafficsim.world import load_default_map
@@ -57,3 +59,22 @@ def test_scen_03_has_blind_side_vehicle_in_alley():
     assert len(sim.vehicles) >= 1
     v = sim.vehicles[0]
     assert v.y > 5.0
+
+
+def test_all_9_combos_tick_without_error():
+    """9 조합 (3 시나리오 × 3 로직)이 1 tick 동안 예외 없이 진행되는지 smoke check."""
+    logics = {
+        "rule_based": lambda: RuleBasedLogic(),
+        "alpamayo": lambda: AlpamayoLogic(),
+        "v2x_blind": lambda: V2XBlindLogic(),
+    }
+    scenarios = ["scen_01", "scen_02", "scen_03"]
+    for scen in scenarios:
+        for logic_key, make in logics.items():
+            sim = Sim(SimConfig(dt=0.1), logic=make(), world=load_default_map())
+            apply_scenario(sim, scen)
+            for _ in range(10):
+                sim.tick()
+            assert sim.tick_count == 10
+            assert sim.last_action is not None
+            assert sim.last_reason  # non-empty
