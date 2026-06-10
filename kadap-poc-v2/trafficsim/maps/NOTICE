@@ -1,0 +1,17 @@
+=====================================================================
+Third-party OpenDRIVE map fixtures bundled in this directory.
+=====================================================================
+
+e6mini.xodr
+-----------
+Source: esmini project (https://github.com/esmini/esmini)
+License: Mozilla Public License 2.0 (MPL-2.0)
+Upstream: resources/xodr/e6mini.xodr (master branch)
+Fetched: 2026-06-10
+Use: 능동 traffic sim 프로토타입 검증용 fixture (OpenDRIVE → WorldMap 파이프라인 검증).
+     변형 없이 그대로 보관.
+
+Per MPL-2.0 §3.2, source-code-equivalent (the .xodr file itself) is
+distributed in this directory and any future modifications will be
+released under MPL-2.0. Upstream LICENSE text is available at the
+esmini repository.
