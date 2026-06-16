@@ -1,0 +1,9 @@
+{# Autoware container status badge. #}
+{% set color = 'ok' if (status.running and status.rosbridge_reachable and runtime_running) else ('warn' if status.running else 'err') %}
+<div class="aw-status-pill aw-{{ color }}">
+  <span class="aw-dot"></span>
+  컨테이너 {{ '🟢 가동' if status.running else '🔴 중지' }}
+  · rosbridge {{ '🟢' if status.rosbridge_reachable else '🔴' }}
+  · bridge {{ '🟢' if runtime_running else '🔴' }}
+</div>
+{% if error %}<div class="aw-err">{{ error }}</div>{% endif %}

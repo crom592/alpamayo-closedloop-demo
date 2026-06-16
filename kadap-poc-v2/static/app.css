@@ -497,3 +497,33 @@ pre code { display: block; padding: 0.5rem; background: var(--code-bg); border-r
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* ---- Autoware sim tab ------------------------------------------------- */
+.aw-tab { padding: 0.8rem 1rem; }
+.aw-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; }
+.aw-head h2 { margin: 0 0 0.3rem; font-size: 1.15rem; }
+.aw-head p { margin: 0; font-size: 0.85rem; line-height: 1.45; }
+.aw-status-pill { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.3rem 0.7rem; border-radius: 999px; font-size: 0.8rem; background: var(--card-bg); border: 1px solid var(--border); white-space: nowrap; }
+.aw-dot { width: 0.55rem; height: 0.55rem; border-radius: 999px; background: #94a3b8; }
+.aw-ok .aw-dot { background: #16a34a; }
+.aw-warn .aw-dot { background: #eab308; }
+.aw-err .aw-dot { background: #dc2626; }
+.aw-err { color: #dc2626; font-size: 0.8rem; }
+.aw-controls { display: flex; gap: 0.6rem; align-items: end; flex-wrap: wrap; margin-bottom: 0.4rem; padding: 0.7rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; }
+.aw-form { display: flex; gap: 0.6rem; align-items: end; flex-wrap: wrap; }
+.aw-form label { display: flex; flex-direction: column; gap: 0.25rem; font-size: 0.78rem; color: var(--muted); }
+.aw-form select { padding: 0.35rem 0.5rem; border-radius: 4px; border: 1px solid var(--border); background: white; font: inherit; min-width: 180px; }
+.aw-msg { font-size: 0.85rem; padding: 0.4rem 0.6rem; min-height: 1.3em; }
+.aw-grid { display: grid; grid-template-columns: 1fr; gap: 1rem; }
+.aw-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.6rem; }
+.aw-stat { padding: 0.6rem 0.8rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; }
+.aw-stat-label { font-size: 0.72rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+.aw-stat-value { font-size: 1.2rem; font-weight: 600; color: var(--fg); margin-top: 0.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.aw-decision { padding: 0.7rem 0.9rem; background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 6px; }
+.aw-decision-text { font-family: ui-monospace, "SF Mono", monospace; font-size: 0.85rem; margin-top: 0.3rem; color: #075985; }
+.aw-cam-wrap { padding: 0.7rem 0.9rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; }
+.aw-cam { display: block; margin-top: 0.3rem; max-width: 480px; width: 100%; border-radius: 4px; border: 1px solid var(--border); }
+
+.aw-pipeline { margin-top: 1rem; padding: 0.7rem 0.9rem; background: var(--card-bg); border: 1px solid var(--border); border-radius: 6px; }
+.aw-pipeline summary { cursor: pointer; font-size: 0.85rem; color: var(--muted); }
+.aw-arch { margin-top: 0.5rem; padding: 0.7rem; background: #0f172a; color: #e2e8f0; font-family: ui-monospace, monospace; font-size: 0.75rem; overflow-x: auto; border-radius: 4px; }

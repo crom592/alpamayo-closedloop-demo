@@ -1,0 +1,81 @@
+{# Autoware sim 탭 — planning_simulator + Alpamayo bridge 통합 데모. #}
+<section class="aw-tab">
+  <header class="aw-head">
+    <div>
+      <h2>🛠 Autoware planning_simulator × Alpamayo</h2>
+      <p class="muted">
+        Autoware <strong>planning_simulator</strong> (Docker, headless) +
+        <strong>rosbridge_server</strong> + 호스트 측 <strong>Alpamayo bridge</strong>가
+        ROS 2 토픽으로 통합. 합성 카메라 frame이 흐르고, 호스트가 추론·trajectory를 발행합니다.
+      </p>
+      <p class="muted" style="margin-top:0.3rem;font-size:0.78rem;">
+        <strong>C-실용 통합 검증 (현재 단계)</strong>: 컨테이너 ↔ rosbridge ↔ Alpamayo bridge ↔ FastAPI 탭 데이터 흐름.
+        다음 단계 (별도 PoC): 실제 Alpamayo 모델 추론, ego 자율주행 제어 (Autoware의 sample-map-planning 진단/route 보정 필요).
+      </p>
+    </div>
+    <div class="aw-status"
+         hx-get="/autoware_sim/status"
+         hx-trigger="load, every 3s"
+         hx-target="this"
+         hx-swap="innerHTML">
+      <span class="muted">상태 조회 중…</span>
+    </div>
+  </header>
+
+  <div class="aw-controls">
+    <form hx-post="/autoware_sim/start"
+          hx-target="#aw-msg" hx-swap="innerHTML"
+          class="aw-form">
+      <label>카메라 소스 (rollout mp4)
+        <select name="mp4_key">
+          {% for opt in mp4_options %}
+            <option value="{{ opt.key }}">{{ opt.name }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>Alpamayo 모드
+        <select name="mode">
+          <option value="mock" selected>mock (간이 trajectory 발행)</option>
+          <option value="live" disabled>live (별도 PoC에서 alpamayo1.5 호출)</option>
+        </select>
+      </label>
+      <button type="submit" class="btn btn-primary">▶ bridge 기동</button>
+    </form>
+    <button hx-post="/autoware_sim/stop" hx-target="#aw-msg" hx-swap="innerHTML"
+            class="btn btn-ghost">⏹ 정지</button>
+  </div>
+  <div id="aw-msg" class="aw-msg muted"></div>
+
+  <div class="aw-grid"
+       hx-get="/autoware_sim/state"
+       hx-trigger="load delay:500ms, every 1s"
+       hx-target="this"
+       hx-swap="innerHTML">
+    <div class="muted">상태 대기 중…</div>
+  </div>
+
+  <details class="aw-pipeline">
+    <summary>통합 파이프라인 구조</summary>
+    <pre class="aw-arch">
+브라우저 (탭 폴링)
+  ↕ HTMX (1s)
+FastAPI (kadap-poc-v2)
+  ↕ rosbridge WS :9091
+[Docker] autoware:latest-humble-runtime-amd64
+  ├ planning_simulator.launch.xml (sample-map-planning, rviz=false)
+  └ rosbridge_websocket (port :9091)
+
+호스트 (alpasim venv, Py 3.12)
+  ├ SynthCameraPublisher → /sensing/camera/front/image_raw (CompressedImage, 2 Hz)
+  └ AlpamayoBridge
+      ↳ sub /sensing/camera/front/image_raw, /localization/kinematic_state
+      ↳ pub /autoware_sim/alpamayo_trajectory (Trajectory)
+      ↳ pub /autoware_sim/decision (String)
+
+자동 초기화 (start 시):
+  1) /initialpose3d publish
+  2) /api/routing/set_route_points service call
+  3) /api/operation_mode/change_to_autonomous service call
+    </pre>
+  </details>
+</section>

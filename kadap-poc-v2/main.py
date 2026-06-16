@@ -851,6 +851,118 @@ async def trafficsim_reset(request: Request, run_id: str):
 
 
 # ---------------------------------------------------------------------------
+# Tab 🛠 Autoware sim — planning_simulator + Alpamayo bridge (C-실용)
+# ---------------------------------------------------------------------------
+
+from autoware_sim import docker_mgr as _aw_dm  # noqa: E402
+from autoware_sim.runtime import get_runtime as _get_aw_runtime  # noqa: E402
+
+
+def _aw_mp4_options() -> list[dict]:
+    """closedloop_videos 디렉토리에서 카메라 소스 mp4 list."""
+    out = []
+    if CLOSEDLOOP_VIDEOS_DIR.exists():
+        for p in sorted(CLOSEDLOOP_VIDEOS_DIR.glob("*.mp4"))[:8]:
+            out.append({"key": p.name, "name": p.stem[:18]})
+    return out or [{"key": "", "name": "(rollout mp4 없음)"}]
+
+
+@app.get("/tab/autoware_sim", response_class=HTMLResponse)
+async def tab_autoware_sim(request: Request):
+    return TEMPLATES.TemplateResponse(
+        request,
+        "tab_autoware_sim.html",
+        {"mp4_options": _aw_mp4_options()},
+    )
+
+
+@app.get("/autoware_sim/status", response_class=HTMLResponse)
+async def autoware_sim_status(request: Request):
+    status = _aw_dm.container_status()
+    rt = _get_aw_runtime()
+    return TEMPLATES.TemplateResponse(
+        request,
+        "_autoware_sim_status.html",
+        {"status": status, "runtime_running": rt.running, "error": rt.error},
+    )
+
+
+@app.get("/autoware_sim/state", response_class=HTMLResponse)
+async def autoware_sim_state(request: Request):
+    rt = _get_aw_runtime()
+    payload = {
+        "running": rt.running,
+        "last_decision": rt.state.last_decision,
+        "last_camera_seq": rt.state.last_camera_seq,
+        "last_camera_thumb_b64": rt.state.last_camera_thumb_b64,
+        "ego_x": rt.state.ego_x,
+        "ego_y": rt.state.ego_y,
+        "ego_speed": rt.state.ego_speed,
+    }
+    return TEMPLATES.TemplateResponse(
+        request, "_autoware_sim_state.html", {"state": payload}
+    )
+
+
+@app.post("/autoware_sim/start", response_class=HTMLResponse)
+async def autoware_sim_start(
+    request: Request,
+    mp4_key: str = Form(""),
+    mode: str = Form("mock"),
+):
+    rt = _get_aw_runtime()
+    if rt.running:
+        return HTMLResponse('<span class="muted">이미 가동 중입니다.</span>')
+    # 1. 컨테이너 보장
+    try:
+        st = _aw_dm.container_status()
+        if not st.running:
+            _aw_dm.start_container()
+            # rosbridge 포트 listen까지 대기 (최대 30s)
+            import socket
+            import time as _t
+            deadline = _t.monotonic() + 30
+            while _t.monotonic() < deadline:
+                try:
+                    with socket.create_connection(
+                        ("127.0.0.1", _aw_dm.ROSBRIDGE_PORT), timeout=1.0
+                    ):
+                        break
+                except OSError:
+                    await asyncio.sleep(1.0)
+    except Exception as e:  # noqa: BLE001
+        return HTMLResponse(
+            f'<span class="aw-err">컨테이너 기동 실패: {e}</span>',
+            status_code=200,
+        )
+    # 2. 호스트 bridge runtime 기동
+    mp4_path = CLOSEDLOOP_VIDEOS_DIR / mp4_key if mp4_key else None
+    if not mp4_path or not mp4_path.exists():
+        return HTMLResponse(
+            '<span class="aw-err">mp4 파일을 찾을 수 없습니다.</span>',
+            status_code=200,
+        )
+    try:
+        rt.start(mp4_path=mp4_path, mode=mode)
+    except Exception as e:  # noqa: BLE001
+        return HTMLResponse(
+            f'<span class="aw-err">bridge 기동 실패: {e}</span>',
+            status_code=200,
+        )
+    return HTMLResponse(
+        '<span class="muted">기동 완료 — 아래 상태 패널이 1초마다 갱신됩니다.</span>'
+    )
+
+
+@app.post("/autoware_sim/stop", response_class=HTMLResponse)
+async def autoware_sim_stop(request: Request):
+    rt = _get_aw_runtime()
+    if rt.running:
+        rt.stop()
+    return HTMLResponse('<span class="muted">bridge 정지. (컨테이너는 살아 있음 — 재시작 빠름)</span>')
+
+
+# ---------------------------------------------------------------------------
 # Tab ⓘ 시스템 — docker/gpu 상태 + 카탈로그 + 시스템 구성 정적 정보
 # ---------------------------------------------------------------------------
 

@@ -1,0 +1,37 @@
+{# Autoware sim 상태 panel — 1s 폴링. #}
+{% if not state.running %}
+  <div class="muted">미기동.</div>
+{% else %}
+<div class="aw-stats">
+  <div class="aw-stat">
+    <div class="aw-stat-label">cam frames</div>
+    <div class="aw-stat-value">{{ state.last_camera_seq }}</div>
+  </div>
+  <div class="aw-stat">
+    <div class="aw-stat-label">ego x</div>
+    <div class="aw-stat-value">{{ "%.2f"|format(state.ego_x) }}</div>
+  </div>
+  <div class="aw-stat">
+    <div class="aw-stat-label">ego y</div>
+    <div class="aw-stat-value">{{ "%.2f"|format(state.ego_y) }}</div>
+  </div>
+  <div class="aw-stat">
+    <div class="aw-stat-label">속도</div>
+    <div class="aw-stat-value">{{ "%.2f"|format(state.ego_speed) }} m/s</div>
+  </div>
+</div>
+
+<div class="aw-decision">
+  <div class="aw-stat-label">Alpamayo 결정 (bridge → /planning/scenario_planning/trajectory)</div>
+  <div class="aw-decision-text">{{ state.last_decision }}</div>
+</div>
+
+<div class="aw-cam-wrap">
+  <div class="aw-stat-label">합성 카메라 (rollout frame → /sensing/camera/front/image_raw)</div>
+  {% if state.last_camera_thumb_b64 %}
+    <img class="aw-cam" src="data:image/jpeg;base64,{{ state.last_camera_thumb_b64 }}" alt="cam">
+  {% else %}
+    <div class="muted">대기 중…</div>
+  {% endif %}
+</div>
+{% endif %}
